@@ -23,16 +23,27 @@ export const MONSTER_SPRITES = {
   dragon: { file: 'assets/monsters/dragon.png', frameW: 70, frameH: 73, frames: 6 },
 };
 
-// One rendered d6 per die "theme" (see js/data/dice-data.js theme field).
+// One rendered die per die "theme" (see js/data/dice-data.js theme field),
+// using the polyhedron shape that actually matches that die's face range —
+// a die that can roll up to 10 shows as a d10, not a d6 wearing a costume.
 export const DIE_THEME_ART = {
-  stone: 'assets/dice/stone.png',
-  ember: 'assets/dice/ember.png',
-  gold: 'assets/dice/gold.png',
-  verdant: 'assets/dice/verdant.png',
-  arcane: 'assets/dice/arcane.png',
-  void: 'assets/dice/void.png',
-  lucky: 'assets/dice/lucky.png',
+  stone: 'assets/dice/stone-d6.png',
+  ember: 'assets/dice/ember-d10.png',
+  gold: 'assets/dice/gold-d20.png',
+  verdant: 'assets/dice/verdant-d12.png',
+  arcane: 'assets/dice/arcane-d6.png',
+  void: 'assets/dice/void-d6.png',
+  lucky: 'assets/dice/lucky-d6.png',
 };
+
+/** Which polyhedron a die's face range actually corresponds to. */
+export function shapeForMaxFace(maxValue) {
+  if (maxValue <= 6) return 'd6';
+  if (maxValue <= 8) return 'd8';
+  if (maxValue <= 10) return 'd10';
+  if (maxValue <= 12) return 'd12';
+  return 'd20';
+}
 
 export const FX_SPRITES = {
   releaseHit: { file: 'assets/fx/release-hit.png', frameW: 51, frameH: 51, frames: 5 },

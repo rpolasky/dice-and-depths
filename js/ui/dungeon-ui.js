@@ -55,7 +55,7 @@ export function renderDungeon(root, state, actions) {
         <div class="party-strip">
           ${expedition.partyIds.map((id) => {
             const c = getCharacterDef(id);
-            return `<button class="party-chip" data-char="${id}" title="Tap for details">${c.icon}</button>`;
+            return `<button class="party-chip" data-char="${id}" title="Tap for details" style="background-image:url(${c.portrait})"></button>`;
           }).join('')}
           <div class="party-hp-bar" aria-label="Party HP">
             <div class="party-hp-fill" style="width:${hpPct}%"></div>

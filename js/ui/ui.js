@@ -89,7 +89,10 @@ function renderTavern(root, state, actions) {
         ${hasParty
           ? permanent.activeParty.map((id) => {
               const c = getCharacterDef(id);
-              return `<button class="party-chip party-chip--large" data-char="${id}">${c.icon}<span class="party-chip-name">${c.name}</span></button>`;
+              return `<button class="party-chip party-chip--large" data-char="${id}">
+                <div class="party-chip-portrait" style="background-image:url(${c.portrait})"></div>
+                <span class="party-chip-name">${c.name}</span>
+              </button>`;
             }).join('')
           : '<p class="subtle">No party chosen yet.</p>'}
       </div>
@@ -130,7 +133,7 @@ function renderPartySelect(root, state, actions) {
           const isSelected = selected.includes(id);
           return `
             <button class="character-card ${isSelected ? 'character-card--selected' : ''}" data-id="${id}">
-              <div class="character-icon">${c.icon}</div>
+              <div class="character-portrait" style="background-image:url(${c.portrait})"></div>
               <div class="character-name">${c.name}</div>
               <div class="character-tagline">${c.tagline}</div>
               <div class="character-desc">${c.description}</div>

@@ -27,7 +27,8 @@ export function renderDebugPanel(root, state, actions) {
         <button data-action="add-power">+1 Power Die</button>
         <button data-action="add-critical">+1 Critical Die</button>
         <button data-action="add-cursed">+1 Cursed Die</button>
-        <button data-action="set-oc-80">Set OC=80</button>
+        <button data-action="set-oc-20">Set OC=20 (Hot)</button>
+        <button data-action="set-oc-30">Set OC=30 (Crit)</button>
         <button data-action="set-oc-0">Set OC=0</button>
         <button data-action="damage-party">-20 Party HP</button>
         <button data-action="heal-party">+20 Party HP</button>
@@ -44,7 +45,8 @@ export function renderDebugPanel(root, state, actions) {
   panel.querySelector('[data-action="add-power"]').addEventListener('click', () => actions.debugAddDie('power_die'));
   panel.querySelector('[data-action="add-critical"]').addEventListener('click', () => actions.debugAddDie('critical_die'));
   panel.querySelector('[data-action="add-cursed"]').addEventListener('click', () => actions.debugAddDie('cursed_die'));
-  panel.querySelector('[data-action="set-oc-80"]').addEventListener('click', () => actions.debugSetOvercharge(80));
+  panel.querySelector('[data-action="set-oc-20"]').addEventListener('click', () => actions.debugSetOvercharge(20));
+  panel.querySelector('[data-action="set-oc-30"]').addEventListener('click', () => actions.debugSetOvercharge(30));
   panel.querySelector('[data-action="set-oc-0"]').addEventListener('click', () => actions.debugSetOvercharge(0));
   panel.querySelector('[data-action="damage-party"]').addEventListener('click', () => actions.debugDamageParty(20));
   panel.querySelector('[data-action="heal-party"]').addEventListener('click', () => actions.debugHealParty(20));

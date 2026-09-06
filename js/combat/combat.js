@@ -113,6 +113,7 @@ export function resolvePush(fight, chosenInstanceId) {
   let outcome = null;
   let healAmount = 0;
   let bustTriggered = false;
+  let clericCredit = null;
   let webWasActive = fight.webActive;
 
   // Web debuff: adds a flat chance of an automatic bust on this push.
@@ -126,6 +127,7 @@ export function resolvePush(fight, chosenInstanceId) {
     const clericBoost = fight.abilities.onHealingDieBoost?.[0];
     const mult = clericBoost ? 1 + clericBoost.boostPercent / 100 : 1;
     healAmount = Math.round(face.value * mult);
+    if (clericBoost) clericCredit = { characterId: clericBoost.characterId, hook: 'onHealingDieBoost' };
     log.push(`${face.dieName} heals the party for ${healAmount}.`);
   } else {
     overcharge += face.value;
@@ -148,12 +150,12 @@ export function resolvePush(fight, chosenInstanceId) {
 
   if (bustTriggered) {
     nextFight = applyBust(nextFight);
-    nextFight.lastEvent = stampEvent('bust', { face });
+    nextFight.lastEvent = stampEvent('bust', { face, abilityCredit: nextFight.abilityCredit });
     return { fight: nextFight, result: { type: 'bust', face, healAmount } };
   }
 
   if (healAmount > 0) {
-    nextFight.lastEvent = stampEvent('heal', { face, healAmount });
+    nextFight.lastEvent = stampEvent('heal', { face, healAmount, abilityCredit: clericCredit });
     return { fight: nextFight, result: { type: 'heal', face, healAmount } };
   }
 
@@ -167,8 +169,10 @@ function applyBust(fight) {
   const berserkerAbility = fight.abilities.onConsecutivePushDamage?.[0];
 
   let lossPercent = BALANCE.bust.overchargeLossPercent;
+  let mitigatedByRogue = false;
   if (rogueAbility && bustCountThisFight === 1) {
     lossPercent = 100 - rogueAbility.mitigatePercent;
+    mitigatedByRogue = true;
   }
   if (berserkerAbility) {
     lossPercent = Math.min(100, lossPercent * berserkerAbility.bustPenaltyMult);
@@ -184,6 +188,7 @@ function applyBust(fight) {
     bustCountThisFight,
     consecutivePushes: 0,
     log,
+    abilityCredit: mitigatedByRogue ? { characterId: rogueAbility.characterId, hook: 'onFirstBustMitigate' } : null,
   };
 }
 
@@ -191,8 +196,11 @@ function applyBust(fight) {
 export function release(fight) {
   const berserkerAbility = fight.abilities.onConsecutivePushDamage?.[0];
   let mult = 1;
+  let berserkerCredit = null;
   if (berserkerAbility) {
-    mult += Math.min(berserkerAbility.maxBonus, fight.consecutivePushes * berserkerAbility.bonusPerPush);
+    const bonus = Math.min(berserkerAbility.maxBonus, fight.consecutivePushes * berserkerAbility.bonusPerPush);
+    mult += bonus;
+    if (bonus > 0) berserkerCredit = { characterId: berserkerAbility.characterId, hook: 'onConsecutivePushDamage', bonusPercent: Math.round(bonus * 100) };
   }
 
   let damage = computeReleaseDamage(fight.overcharge, mult);
@@ -214,11 +222,11 @@ export function release(fight) {
 
   if (monster.currentHp <= 0) {
     nextFight.outcome = 'victory';
-    nextFight.lastEvent = stampEvent('victory', { damage });
+    nextFight.lastEvent = stampEvent('victory', { damage, abilityCredit: berserkerCredit });
     return { fight: nextFight, result: { type: 'victory', damage } };
   }
 
-  nextFight.lastEvent = stampEvent('release', { damage });
+  nextFight.lastEvent = stampEvent('release', { damage, abilityCredit: berserkerCredit });
   return { fight: nextFight, result: { type: 'release', damage } };
 }
 

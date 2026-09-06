@@ -111,6 +111,11 @@ export function getDieDef(dieId) {
   return def;
 }
 
+export function getMaxFaceValue(dieId) {
+  const def = getDieDef(dieId);
+  return Math.max(...def.faces.map((f) => f.value));
+}
+
 export function listDiceByRarity(rarity) {
   return Object.values(DICE_DATA).filter((d) => d.rarity === rarity);
 }

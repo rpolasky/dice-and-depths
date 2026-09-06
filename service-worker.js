@@ -6,7 +6,7 @@
 // cleared out automatically.
 // ============================================================
 
-const CACHE_NAME = 'dice-and-depths-v4';
+const CACHE_NAME = 'dice-and-depths-v5';
 
 const PRECACHE_URLS = [
   './',
@@ -65,13 +65,13 @@ const PRECACHE_URLS = [
   './assets/characters/cleric.svg',
   './assets/characters/scout.svg',
 
-  './assets/dice/stone.png',
-  './assets/dice/ember.png',
-  './assets/dice/gold.png',
-  './assets/dice/verdant.png',
-  './assets/dice/arcane.png',
-  './assets/dice/void.png',
-  './assets/dice/lucky.png',
+  './assets/dice/stone-d6.png',
+  './assets/dice/ember-d10.png',
+  './assets/dice/gold-d20.png',
+  './assets/dice/verdant-d12.png',
+  './assets/dice/arcane-d6.png',
+  './assets/dice/void-d6.png',
+  './assets/dice/lucky-d6.png',
 
   './assets/monsters/goblin.png',
   './assets/monsters/goblin_brute.png',

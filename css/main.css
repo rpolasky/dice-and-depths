@@ -183,6 +183,23 @@ p { line-height: 1.5; }
   background: var(--c-surface-raised);
 }
 .character-icon { font-size: 1.6rem; }
+.character-portrait {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-s);
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 6px;
+}
+.character-modal-portrait {
+  width: 140px;
+  aspect-ratio: 3 / 4;
+  margin: 0 auto;
+  border-radius: var(--radius-m);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 20px -6px rgba(0,0,0,0.6);
+}
 .character-name { font-family: var(--font-display); font-weight: 600; color: var(--c-parchment); }
 .character-tagline { color: var(--c-ember); font-size: 0.8rem; }
 .character-desc { color: var(--c-text-muted); font-size: 0.78rem; }
@@ -326,11 +343,17 @@ p { line-height: 1.5; }
   height: auto;
   border-radius: var(--radius-m);
   flex-direction: column;
-  padding: 10px 16px;
-  gap: 4px;
-  font-size: 1.6rem;
+  padding: 10px;
+  gap: 6px;
   background: var(--c-surface);
   border: 1px solid var(--c-surface-line);
+}
+.party-chip-portrait {
+  width: 64px;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-s);
+  background-size: cover;
+  background-position: center;
 }
 .party-chip-name {
   font-size: 0.65rem;

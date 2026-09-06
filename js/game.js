@@ -154,7 +154,10 @@ function showCharacterInfo(characterId) {
   const c = getCharacterDef(characterId);
   showModal({
     title: c.name, icon: c.icon,
-    bodyHtml: `<p class="subtle">${c.className}</p><p>${c.description}</p>`,
+    bodyHtml: `
+      <div class="character-modal-portrait" style="background-image:url(${c.portrait})"></div>
+      <p class="subtle" style="text-align:center;margin-top:8px;">${c.className} · "${c.tagline}"</p>
+      <p>${c.description}</p>`,
     buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
   });
 }

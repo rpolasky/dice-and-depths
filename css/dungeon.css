@@ -195,15 +195,27 @@
 }
 .party-chip {
   font-size: 1.3rem;
-  background: var(--c-surface-raised);
-  border: none;
+  background-color: var(--c-surface-raised);
+  background-size: cover;
+  background-position: center top;
+  border: 2px solid var(--c-surface-line);
   border-radius: 50%;
-  width: 34px; height: 34px;
+  width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
   padding: 0;
   cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 .party-chip:active { transform: scale(0.92); }
+.party-chip--ability-glow {
+  border-color: var(--c-ember);
+  box-shadow: 0 0 0 3px rgba(232,163,61,0.35), 0 0 14px rgba(232,163,61,0.6);
+  animation: chip-glow-pulse 1.1s ease-out;
+}
+@keyframes chip-glow-pulse {
+  0% { box-shadow: 0 0 0 6px rgba(232,163,61,0.6), 0 0 22px rgba(232,163,61,0.9); }
+  100% { box-shadow: 0 0 0 3px rgba(232,163,61,0.35), 0 0 14px rgba(232,163,61,0.6); }
+}
 .party-hp-bar {
   flex: 1;
   position: relative;

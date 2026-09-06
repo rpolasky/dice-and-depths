@@ -1,6 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="240" height="320" viewBox="0 0 240 320">
-  <rect width="240" height="320" fill="#14161d"/>
-  <rect x="10" y="10" width="220" height="300" rx="12" fill="none" stroke="#6bbf59" stroke-width="3" opacity="0.6"/>
-  <circle cx="120" cy="130" r="60" fill="#6bbf59" opacity="0.18"/>
-  <text x="120" y="260" font-size="20" fill="#6bbf59" text-anchor="middle" font-family="Georgia, serif">scout</text>
+  <defs>
+    <radialGradient id="glow-scout" cx="50%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="#6bbf59" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#6bbf59" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bg-scout" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c1f29"/>
+      <stop offset="100%" stop-color="#0d0e13"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="320" fill="url(#bg-scout)"/>
+  <circle cx="120" cy="120" r="100" fill="url(#glow-scout)"/>
+  <rect x="8" y="8" width="224" height="304" rx="14" fill="none" stroke="#6bbf59" stroke-width="2" opacity="0.55"/>
+  <rect x="16" y="16" width="208" height="288" rx="10" fill="none" stroke="#6bbf59" stroke-width="1" opacity="0.25"/>
+  <circle cx="120" cy="118" r="72" fill="none" stroke="#6bbf59" stroke-width="2" opacity="0.4"/>
+  <text x="120" y="150" font-size="92" text-anchor="middle" dominant-baseline="middle">🏹</text>
+  <rect x="24" y="252" width="192" height="1" fill="#6bbf59" opacity="0.4"/>
+  <text x="120" y="286" font-size="22" fill="#6bbf59" text-anchor="middle" font-family="Georgia, serif" letter-spacing="3" font-weight="bold">SCOUT</text>
 </svg>

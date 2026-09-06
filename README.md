@@ -34,6 +34,33 @@ your explicit upload.
 
 ---
 
+## Latest pass: combat "juice" and character presence
+
+- **Dice now render as the correct polyhedron for their actual range** —
+  a die that can roll up to 14 shows as a d20, not a d6 (see
+  `shapeForMaxFace()` in `sprite-data.js`). Basic die → d6, power die →
+  d10, healing die → d12, critical die → d20.
+- **Real roll animation**: the die tumbles (multi-axis rotation + bounce)
+  with a slot-machine number-cycling effect while "rolling," then locks
+  onto the actual correct result — no more static art with a mismatched
+  number.
+- **The Overcharge bar reacts**: it pulses on every increase, and fires a
+  full banner animation ("OVERCHARGED!" / "CRITICAL!!") with haptic
+  feedback when you cross into a new damage tier.
+- **Character abilities are now visibly credited.** `combat.js` tags
+  which character's ability fired on a given event (Rogue's bust
+  mitigation, Cleric's heal boost, Berserker's damage stacking); the
+  battle panel glows that character's portrait and shows a toast naming
+  them (see `creditAbility()` in `combat-ui.js`).
+- **Real character portraits are wired in everywhere** — they existed as
+  files but were never actually referenced correctly (wrong path) or
+  displayed. Now used on the party-select cards, the tavern's party
+  preview, the in-dungeon party strip, and the character info modal.
+- Punchier RELEASE/PUSH buttons — RELEASE pulses/glows when you're in a
+  favorable damage tier.
+
+---
+
 ## Recent rework: real navigation, inline combat, and the tavern hub
 
 Several systems described later in this doc changed shape significantly
