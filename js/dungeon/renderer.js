@@ -23,10 +23,10 @@
  *   theme: 'stone' | 'bone' | 'ember' | 'arcane' | 'void',
  *   roomKind: 'monster' | 'treasure' | 'hidden_dice' | 'trap' | 'puzzle'
  *            | 'shrine' | 'story' | 'empty' | 'boss',
- *   room: the full room object (renderers may use room.index, room.resolved, etc.),
+ *   room: the full room object (renderers may use room.isExit, room.resolved, etc.),
  *   monsterId: string | null,
+ *   exits: { forward, left, right, back } — relative to current facing,
  *   direction: 'north' | 'east' | 'south' | 'west',
- *   depthRemaining: number,
  *   resolved: boolean,
  * }
  */

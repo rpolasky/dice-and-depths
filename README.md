@@ -34,6 +34,35 @@ your explicit upload.
 
 ---
 
+## Recent rework: real navigation, inline combat, and the tavern hub
+
+Several systems described later in this doc changed shape significantly
+in the latest pass — noting it here so the rest of the doc reads correctly:
+
+- **The dungeon is a real branching maze now**, not a straight line of
+  rooms. Turning left/right actually changes what's ahead; a single tap
+  on LEFT/FORWARD/RIGHT/BACK both faces that direction and steps into it,
+  and is only enabled when a door actually exists that way.
+- **Combat renders inline** on the dungeon screen (see `dungeon-ui.js` /
+  `combat-ui.js`) — the corridor image and HUD never navigate away to a
+  separate screen; only the bottom control panel swaps between
+  exploration controls and the battle panel.
+- **A `FLEE` option exists** in combat — running out of dice mid-fight no
+  longer soft-locks you into free damage every round.
+- **The dungeon and tavern screens are full-bleed** (edge-to-edge, no
+  card padding) — see the `.screen--full-bleed` class in `main.css`.
+- **A tavern hub** (`assets/scenes/guild-hall.jpg`) is the home base:
+  land here after boot, after extracting, and after dying — never back
+  at the title screen mid-game. Choose your party, check the monster
+  codex/dice library/stats, then head to the dungeon from here.
+- **Overcharge thresholds and monster HP were rebalanced** — the
+  original numbers required more dice than a starting bag even
+  contained to reach a damage bonus tier. See `balance.js` and the
+  `tier` field on monsters in `monster-data.js` (tier gates which
+  floors a monster can appear on, by absolute floor number).
+
+---
+
 ## 1. Running it locally
 
 Browsers block ES module `import` statements from `file://` URLs, so you need
@@ -155,7 +184,7 @@ js/
   ui/
     ui.js                     Screen dispatcher (title/party-select/summary/game-over)
     dungeon-ui.js               Renders the exploration screen
-    combat-ui.js                Renders the combat screen (sprite, dice roller, FX)
+    combat-ui.js                Renders the battle panel INLINE on the dungeon screen (dice roller, FX)
     modal.js                    Generic reusable modal
     debug-panel.js               Dev-only balance tools
     sprite-fx.js                 Plays filmstrip sprite sheets (idle loops + one-shot bursts)

@@ -7,16 +7,26 @@
 import { store, freshState } from './state.js';
 
 const SAVE_KEY = 'dicecrawl_save_v1';
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 const migrations = {
-  // Example for the future:
-  // 1: (data) => ({ ...data, saveVersion: 2, permanent: { ...data.permanent, newField: true } }),
+  // v1 saves predate the tavern hub (activeParty/monsterCodex/stats) and
+  // the map overlay toggle — fill in sane defaults rather than losing them.
+  1: (data) => ({
+    ...data,
+    saveVersion: 2,
+    permanent: {
+      activeParty: [],
+      monsterCodex: [],
+      stats: { bestAttackDamage: 0, monstersDefeated: 0, expeditionsRun: 0 },
+      ...data.permanent,
+    },
+  }),
 };
 
 export function saveGame() {
   try {
-    const { screen, debugPanelOpen, ...persisted } = store.get();
+    const { screen, debugPanelOpen, mapOpen, ...persisted } = store.get();
     localStorage.setItem(SAVE_KEY, JSON.stringify(persisted));
     return true;
   } catch (err) {

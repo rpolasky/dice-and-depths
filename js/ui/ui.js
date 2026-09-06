@@ -1,15 +1,13 @@
 // ============================================================
 // UI.JS — top-level screen dispatcher. Owns the #app root and
-// hands off to dungeon-ui.js / combat-ui.js for those screens.
+// hands off to dungeon-ui.js for the exploration/combat screen.
 // Every screen render function receives (root, state, actions).
 // ============================================================
 
 import { renderDungeon } from './dungeon-ui.js';
-import { renderCombat } from './combat-ui.js';
 import { renderDebugPanel } from './debug-panel.js';
-import { getCharacterDef, allCharacterIds } from '../data/character-data.js';
+import { getCharacterDef } from '../data/character-data.js';
 import { BALANCE } from '../data/balance.js';
-import { hasSave } from '../engine/save.js';
 
 let appRoot = null;
 
@@ -21,11 +19,9 @@ export function render(state, actions) {
   if (!appRoot) return;
   switch (state.screen) {
     case 'title': renderTitle(appRoot, state, actions); break;
+    case 'tavern': renderTavern(appRoot, state, actions); break;
     case 'party-select': renderPartySelect(appRoot, state, actions); break;
     case 'dungeon': renderDungeon(appRoot, state, actions); break;
-    case 'combat': renderCombat(appRoot, state, actions); break;
-    case 'extraction-summary': renderExtractionSummary(appRoot, state, actions); break;
-    case 'game-over': renderGameOver(appRoot, state, actions); break;
     default: appRoot.innerHTML = `<div class="screen">Unknown screen: ${state.screen}</div>`;
   }
   renderDebugPanel(document, state, actions);
@@ -44,6 +40,7 @@ function renderDevTab(state, actions) {
 }
 
 function renderTitle(root, state, actions) {
+  const resuming = !!(state.expedition && state.dungeon);
   root.innerHTML = `
     <div class="screen screen--title">
       <div class="title-lockup">
@@ -52,8 +49,9 @@ function renderTitle(root, state, actions) {
         <p class="title-tag">How far will you push?</p>
       </div>
       <div class="title-actions">
-        <button class="btn btn--primary btn--large" data-action="new-expedition">NEW EXPEDITION</button>
-        ${hasSave() ? '<button class="btn btn--secondary btn--large" data-action="continue">CONTINUE</button>' : ''}
+        <button class="btn btn--primary btn--large" data-action="enter">
+          ${resuming ? 'RESUME EXPEDITION' : 'ENTER THE GUILD HALL'}
+        </button>
       </div>
       <div class="title-meta">
         <span>Highest floor reached: ${state.permanent.highestFloorReached}</span>
@@ -61,9 +59,59 @@ function renderTitle(root, state, actions) {
       </div>
     </div>
   `;
-  root.querySelector('[data-action="new-expedition"]').addEventListener('click', actions.goToPartySelect);
-  const cont = root.querySelector('[data-action="continue"]');
-  if (cont) cont.addEventListener('click', actions.continueExpedition);
+  root.querySelector('[data-action="enter"]').addEventListener('click', actions.enterGame);
+}
+
+// ---------------------------------------------------------------
+// TAVERN — the home base. Land here after boot, after extracting,
+// and after dying. Choose a party, check stats/codex/dice, then
+// head to the dungeon when ready.
+// ---------------------------------------------------------------
+
+function renderTavern(root, state, actions) {
+  const { permanent } = state;
+  const size = BALANCE.expedition.startingPartySize;
+  const hasParty = permanent.activeParty.length === size;
+
+  root.innerHTML = `
+    <div class="screen screen--tavern screen--full-bleed">
+      <div class="tavern-hero">
+        <div class="tavern-hero-overlay">
+          <h1>The Guild Hall</h1>
+          <p class="title-tag">Rest here between expeditions.</p>
+        </div>
+      </div>
+
+      <div class="tavern-party-preview">
+        ${hasParty
+          ? permanent.activeParty.map((id) => {
+              const c = getCharacterDef(id);
+              return `<button class="party-chip party-chip--large" data-char="${id}">${c.icon}<span class="party-chip-name">${c.name}</span></button>`;
+            }).join('')
+          : '<p class="subtle">No party chosen yet.</p>'}
+      </div>
+
+      <div class="tavern-menu">
+        <button class="btn btn--secondary" data-action="party">🛡️ Choose Party</button>
+        <button class="btn btn--secondary" data-action="codex">📖 Monster Codex</button>
+        <button class="btn btn--secondary" data-action="dice">🎲 Dice Library</button>
+        <button class="btn btn--secondary" data-action="stats">📊 Stats</button>
+      </div>
+
+      <button class="btn btn--primary btn--large btn--descend" data-action="depart" ${hasParty ? '' : 'disabled'}>
+        ${hasParty ? '⚔️ HEAD TO THE DUNGEON' : 'CHOOSE A PARTY FIRST'}
+      </button>
+    </div>
+  `;
+
+  root.querySelector('[data-action="party"]').addEventListener('click', actions.goToPartySelect);
+  root.querySelector('[data-action="codex"]').addEventListener('click', actions.showMonsterCodex);
+  root.querySelector('[data-action="dice"]').addEventListener('click', actions.showDiceLibrary);
+  root.querySelector('[data-action="stats"]').addEventListener('click', actions.showStats);
+  root.querySelector('[data-action="depart"]').addEventListener('click', actions.startExpeditionFromTavern);
+  root.querySelectorAll('.party-chip').forEach((btn) => {
+    btn.addEventListener('click', () => actions.showCharacterInfo(btn.dataset.char));
+  });
 }
 
 function renderPartySelect(root, state, actions) {
@@ -87,47 +135,14 @@ function renderPartySelect(root, state, actions) {
         }).join('')}
       </div>
       <button class="btn btn--primary btn--large" data-action="confirm" ${selected.length === size ? '' : 'disabled'}>
-        ENTER THE DUNGEON (${selected.length}/${size})
+        CONFIRM PARTY (${selected.length}/${size})
       </button>
-      <button class="btn btn--text" data-action="back">Back</button>
+      <button class="btn btn--text" data-action="back">Back to the tavern</button>
     </div>
   `;
   root.querySelectorAll('.character-card').forEach((card) => {
     card.addEventListener('click', () => actions.toggleCharacterSelect(card.dataset.id));
   });
   root.querySelector('[data-action="confirm"]').addEventListener('click', actions.confirmParty);
-  root.querySelector('[data-action="back"]').addEventListener('click', actions.backToTitle);
-}
-
-function renderExtractionSummary(root, state, actions) {
-  const { lastExtraction } = state;
-  root.innerHTML = `
-    <div class="screen screen--summary">
-      <h2>Extraction successful</h2>
-      <p class="subtle">You returned safely from Floor ${lastExtraction.floorNumber}.</p>
-      <ul class="summary-list">
-        <li>Gold banked: <strong>${lastExtraction.gold}</strong></li>
-        <li>Relics found: <strong>${lastExtraction.relics}</strong></li>
-        <li>Highest floor: <strong>${lastExtraction.floorNumber}</strong></li>
-      </ul>
-      <button class="btn btn--primary btn--large" data-action="continue">RETURN TO CAMP</button>
-    </div>
-  `;
-  root.querySelector('[data-action="continue"]').addEventListener('click', actions.backToTitle);
-}
-
-function renderGameOver(root, state, actions) {
-  const { lastRunReason, lastExtraction } = state;
-  root.innerHTML = `
-    <div class="screen screen--summary screen--gameover">
-      <h2>The expedition has fallen</h2>
-      <p class="subtle">${lastRunReason || 'Your party could not continue.'}</p>
-      <ul class="summary-list">
-        <li>Reached floor: <strong>${lastExtraction?.floorNumber ?? '-'}</strong></li>
-      </ul>
-      <p class="subtle">Permanent progress is kept. Unbanked treasure is lost.</p>
-      <button class="btn btn--primary btn--large" data-action="continue">RETURN TO CAMP</button>
-    </div>
-  `;
-  root.querySelector('[data-action="continue"]').addEventListener('click', actions.backToTitle);
+  root.querySelector('[data-action="back"]').addEventListener('click', actions.backToTavernFromPartySelect);
 }

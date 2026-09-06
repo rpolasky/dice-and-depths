@@ -6,7 +6,7 @@
 // cleared out automatically.
 // ============================================================
 
-const CACHE_NAME = 'dice-and-depths-v2';
+const CACHE_NAME = 'dice-and-depths-v3';
 
 const PRECACHE_URLS = [
   './',
@@ -100,6 +100,8 @@ const PRECACHE_URLS = [
   './assets/dungeon/03_turn_right.png',
   './assets/dungeon/04_t_junction.png',
   './assets/dungeon/05_cross_intersection.png',
+  './assets/dungeon/09_secret_door.png',
+  './assets/dungeon/10_small_room.png',
   './assets/dungeon/11_large_room.png',
   './assets/dungeon/12_chest_closed.png',
   './assets/dungeon/13_chest_open.png',
@@ -114,6 +116,9 @@ const PRECACHE_URLS = [
   './assets/dungeon/27_lava_corridor.png',
   './assets/dungeon/36_puzzle_statues.png',
   './assets/dungeon/37_rune_pedestal.png',
+
+  './assets/scenes/guild-hall.jpg',
+  './assets/scenes/brighthollow-castle.jpg',
 ];
 
 self.addEventListener('install', (event) => {

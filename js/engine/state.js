@@ -8,7 +8,7 @@ import { BALANCE } from '../data/balance.js';
 
 function freshState() {
   return {
-    saveVersion: 1,
+    saveVersion: 2,
 
     // PERMANENT PROGRESSION (persists across expeditions/death)
     permanent: {
@@ -19,6 +19,9 @@ function freshState() {
       bankedGold: 0,
       relics: [],
       storyFlags: [],
+      activeParty: [], // character ids chosen at the tavern, carried into the next expedition
+      monsterCodex: [], // monster ids the player has actually encountered
+      stats: { bestAttackDamage: 0, monstersDefeated: 0, expeditionsRun: 0 },
       settings: { sound: true, haptics: true, reducedMotion: false },
     },
 
@@ -26,8 +29,9 @@ function freshState() {
     expedition: null, // see startExpedition() in game.js for shape
 
     // Meta / UI
-    screen: 'title', // title | party-select | dungeon | combat | extraction | game-over
+    screen: 'title', // title | tavern | party-select | dungeon | extraction-summary | game-over
     debugPanelOpen: false,
+    mapOpen: false,
   };
 }
 

@@ -12,7 +12,7 @@ import * as Dungeon from './dungeon/dungeon.js';
 import * as Movement from './dungeon/movement.js';
 import * as Encounters from './dungeon/encounters.js';
 import * as Progression from './progression/progression.js';
-import { getMonsterDef } from './data/monster-data.js';
+import { getMonsterDef, MONSTER_DATA } from './data/monster-data.js';
 import { getCharacterDef } from './data/character-data.js';
 import { getDieDef } from './data/dice-data.js';
 import { getPuzzle } from './data/content-data.js';
@@ -52,18 +52,40 @@ function checkPartyWipe() {
 }
 
 // ---------------------------------------------------------------
-// TITLE / PARTY SELECT
+// TITLE / TAVERN (home base) / PARTY SELECT
 // ---------------------------------------------------------------
 
-function goToPartySelect() {
-  store.update({ screen: 'party-select', pendingParty: [] });
+/** Title screen's single action: resume a mid-run expedition, or head to the tavern. */
+function enterGame() {
+  const state = store.get();
+  if (state.expedition && state.dungeon) {
+    store.update({ screen: 'dungeon' });
+  } else {
+    store.update({ screen: 'tavern' });
+  }
 }
 
+/** Returns to the tavern without touching any in-progress expedition state. */
+function goToTavern() {
+  store.update({ screen: 'tavern' });
+  saveGame();
+}
+
+/** A full reset back to the title screen (debug/quit use only). */
 function backToTitle() {
   store.update({
     screen: 'title', expedition: null, dungeon: null, fight: null, pendingParty: [],
   });
   saveGame();
+}
+
+function goToPartySelect() {
+  const { permanent } = store.get();
+  store.update({ screen: 'party-select', pendingParty: permanent.activeParty.slice() });
+}
+
+function backToTavernFromPartySelect() {
+  store.update({ screen: 'tavern', pendingParty: [] });
 }
 
 function toggleCharacterSelect(id) {
@@ -80,41 +102,119 @@ function toggleCharacterSelect(id) {
   store.update({ pendingParty: next });
 }
 
+/** Confirming a party at the tavern just sets your roster — it does NOT start an expedition. */
 function confirmParty() {
-  const { pendingParty } = store.get();
-  const expedition = Progression.createExpedition(pendingParty, 1);
-  const startingDice = ['basic_die', 'basic_die', 'basic_die', 'basic_die', 'basic_die', 'power_die', 'healing_die'];
-  expedition.bag = DiceEngine.createBag(startingDice);
-  const dungeon = Dungeon.enterFloor(1);
-  store.update({ screen: 'dungeon', expedition, dungeon, pendingParty: [] });
+  const { pendingParty, permanent } = store.get();
+  store.update({
+    permanent: { ...permanent, activeParty: pendingParty },
+    screen: 'tavern',
+    pendingParty: [],
+  });
   saveGame();
 }
 
-function continueExpedition() {
-  const state = store.get();
-  if (state.expedition && state.dungeon) {
-    store.update({ screen: 'dungeon', fight: null });
-  } else {
+/** The tavern's "head to the dungeon" action — this is what actually starts a run. */
+function startExpeditionFromTavern() {
+  const { permanent } = store.get();
+  if (permanent.activeParty.length !== BALANCE.expedition.startingPartySize) {
     goToPartySelect();
+    return;
   }
+  const expedition = Progression.createExpedition(permanent.activeParty, 1);
+  const startingDice = [
+    'basic_die', 'basic_die', 'basic_die', 'basic_die', 'basic_die', 'basic_die',
+    'power_die', 'power_die', 'healing_die', 'critical_die', 'lucky_die',
+  ];
+  expedition.bag = DiceEngine.createBag(startingDice);
+  const dungeon = Dungeon.enterFloor(1);
+  currentRoomVisited(dungeon);
+  store.update({
+    screen: 'dungeon', expedition, dungeon,
+    permanent: { ...permanent, stats: { ...permanent.stats, expeditionsRun: permanent.stats.expeditionsRun + 1 } },
+  });
+  saveGame();
+}
+
+function currentRoomVisited(dungeon) {
+  const room = Dungeon.currentRoom(dungeon);
+  room.visited = true;
+}
+
+// ---------------------------------------------------------------
+// TAVERN INFO PANELS (character info, monster codex, dice library, stats)
+// ---------------------------------------------------------------
+
+function showCharacterInfo(characterId) {
+  const c = getCharacterDef(characterId);
+  showModal({
+    title: c.name, icon: c.icon,
+    bodyHtml: `<p class="subtle">${c.className}</p><p>${c.description}</p>`,
+    buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
+  });
+}
+
+function showMonsterCodex() {
+  const { permanent } = store.get();
+  const known = new Set(permanent.monsterCodex);
+  const rows = Object.values(MONSTER_DATA).map((m) => {
+    const discovered = known.has(m.id);
+    if (!discovered) {
+      return `<div class="codex-row codex-row--unknown"><span class="codex-icon">❓</span><div><div class="codex-name">???</div><div class="codex-desc">Not yet encountered.</div></div></div>`;
+    }
+    return `<div class="codex-row"><span class="codex-icon">${m.icon}</span><div><div class="codex-name">${m.name}${m.boss ? ' — BOSS' : ''}</div><div class="codex-desc">${m.hp} HP · Tier ${m.tier}</div></div></div>`;
+  }).join('');
+  showModal({
+    title: 'Monster Codex', icon: '📖',
+    bodyHtml: `<div class="codex-list">${rows}</div><p class="subtle">${known.size} of ${Object.keys(MONSTER_DATA).length} discovered.</p>`,
+    buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
+  });
+}
+
+function showDiceLibrary() {
+  const { permanent } = store.get();
+  const rows = permanent.unlockedDiceTypes.map((dieId) => {
+    const d = getDieDef(dieId);
+    return `<div class="codex-row"><span class="codex-icon">🎲</span><div><div class="codex-name">${d.name}</div><div class="codex-desc">${d.description}</div></div></div>`;
+  }).join('');
+  showModal({
+    title: 'Dice Library', icon: '🎲',
+    bodyHtml: `<div class="codex-list">${rows}</div>`,
+    buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
+  });
+}
+
+function showStats() {
+  const { permanent } = store.get();
+  const s = permanent.stats;
+  showModal({
+    title: 'Expedition Record', icon: '📊',
+    bodyHtml: `
+      <ul class="summary-list">
+        <li>Highest floor reached: <strong>${permanent.highestFloorReached}</strong></li>
+        <li>Best single Release: <strong>${s.bestAttackDamage}</strong> dmg</li>
+        <li>Monsters defeated: <strong>${s.monstersDefeated}</strong></li>
+        <li>Expeditions started: <strong>${s.expeditionsRun}</strong></li>
+        <li>Banked gold: <strong>${permanent.bankedGold}</strong></li>
+      </ul>`,
+    buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
+  });
+}
+
+function toggleMap() {
+  store.update({ mapOpen: !store.get().mapOpen });
 }
 
 // ---------------------------------------------------------------
 // MOVEMENT
 // ---------------------------------------------------------------
 
-function moveForward() {
+function goDirection(rel) {
   const { dungeon } = store.get();
-  store.update({ dungeon: Movement.moveForward(dungeon) });
+  const next = Movement.goRelative(dungeon, rel);
+  if (next === dungeon) return; // blocked, nothing to do
+  currentRoomVisited(next);
+  store.update({ dungeon: next });
   saveGame();
-}
-function turnLeft() {
-  const { dungeon } = store.get();
-  store.update({ dungeon: Movement.turnLeft(dungeon) });
-}
-function turnRight() {
-  const { dungeon } = store.get();
-  store.update({ dungeon: Movement.turnRight(dungeon) });
 }
 
 // ---------------------------------------------------------------
@@ -412,22 +512,32 @@ function extract() {
   closeModal();
   const state = store.get();
   const permanent = Progression.bankExpedition(state.permanent, state.expedition);
-  const lastExtraction = {
+  const summary = {
     floorNumber: state.dungeon.floor.floorNumber,
     gold: state.expedition.unbanked.gold,
     relics: state.expedition.unbanked.relics.length,
   };
   store.update({
-    permanent, lastExtraction, screen: 'extraction-summary',
+    permanent, screen: 'tavern',
     expedition: null, dungeon: null, fight: null,
   });
   saveGame();
+  showModal({
+    title: 'Extraction successful', icon: '🚪',
+    bodyHtml: `<p>You returned safely from Floor ${summary.floorNumber}.</p>
+      <ul class="summary-list">
+        <li>Gold banked: <strong>${summary.gold}</strong></li>
+        <li>Relics found: <strong>${summary.relics}</strong></li>
+      </ul>`,
+    buttons: [{ label: 'Back to the tavern', onClick: closeModal }],
+  });
 }
 
 function descendFloor() {
   const { dungeon, expedition } = store.get();
   const nextFloorNumber = dungeon.floor.floorNumber + 1;
   const nextDungeon = Dungeon.enterFloor(nextFloorNumber);
+  currentRoomVisited(nextDungeon);
   store.update({
     dungeon: nextDungeon,
     expedition: { ...expedition, floorNumber: nextFloorNumber },
@@ -438,12 +548,18 @@ function descendFloor() {
 function gameOver(reason) {
   const state = store.get();
   const permanent = Progression.loseExpedition(state.permanent, state.expedition);
-  const lastExtraction = { floorNumber: state.dungeon?.floor?.floorNumber ?? state.expedition?.floorNumber ?? 1 };
+  const floorReached = state.dungeon?.floor?.floorNumber ?? state.expedition?.floorNumber ?? 1;
   store.update({
-    permanent, lastRunReason: reason, lastExtraction,
-    screen: 'game-over', expedition: null, dungeon: null, fight: null,
+    permanent, screen: 'tavern',
+    expedition: null, dungeon: null, fight: null,
   });
   saveGame();
+  showModal({
+    title: 'The expedition has fallen', icon: '💀',
+    bodyHtml: `<p>${reason || 'Your party could not continue.'}</p>
+      <p>Reached floor <strong>${floorReached}</strong>. Permanent progress is kept; unbanked treasure is lost.</p>`,
+    buttons: [{ label: 'Back to the tavern', onClick: closeModal }],
+  });
 }
 
 // ---------------------------------------------------------------
@@ -451,9 +567,12 @@ function gameOver(reason) {
 // ---------------------------------------------------------------
 
 function startCombatEncounter(monsterId) {
-  const { expedition } = store.get();
+  const { expedition, permanent } = store.get();
   const fight = Combat.startCombat({ monsterId, partyIds: expedition.partyIds, bag: expedition.bag });
-  store.update({ fight, screen: 'combat' });
+  const codex = permanent.monsterCodex.includes(monsterId)
+    ? permanent.monsterCodex
+    : permanent.monsterCodex.concat(monsterId);
+  store.update({ fight, permanent: { ...permanent, monsterCodex: codex } });
 }
 
 function combatPush() {
@@ -512,6 +631,7 @@ function finishPush(fight, result) {
 function combatRelease() {
   const state = store.get();
   const { fight: releasedFight, result } = Combat.release(state.fight);
+  trackBestAttack(result.damage);
 
   if (result.type === 'victory') {
     handleVictory(releasedFight);
@@ -524,6 +644,24 @@ function combatRelease() {
   checkPartyWipe();
 }
 
+function trackBestAttack(damage) {
+  if (!damage) return;
+  const { permanent } = store.get();
+  if (damage > permanent.stats.bestAttackDamage) {
+    store.update({ permanent: { ...permanent, stats: { ...permanent.stats, bestAttackDamage: damage } } });
+  }
+}
+
+function combatFlee() {
+  const state = store.get();
+  const fled = Combat.fleeCombat(state.fight);
+  store.update({ fight: null });
+  showModal({
+    title: 'Fled the fight', icon: '🏃',
+    bodyHtml: `<p>You break off and retreat. ${fled.monster.name} is still out there.</p>`,
+    buttons: [{ label: 'Continue', onClick: closeModal }],
+  });
+}
 function applyMonsterEffects(effects) {
   if (effects.partyDamage > 0) {
     const { expedition } = store.get();
@@ -533,7 +671,7 @@ function applyMonsterEffects(effects) {
 
 function handleVictory(fight) {
   const monsterDef = getMonsterDef(fight.monster.id);
-  const { expedition, dungeon } = store.get();
+  const { expedition, dungeon, permanent } = store.get();
   let updatedExpedition = { ...expedition };
   let rewardText = [];
 
@@ -548,8 +686,9 @@ function handleVictory(fight) {
   rewardText.push(`+${gold} gold`);
 
   const updatedDungeon = Dungeon.markRoomResolved(dungeon);
+  const updatedPermanent = { ...permanent, stats: { ...permanent.stats, monstersDefeated: permanent.stats.monstersDefeated + 1 } };
 
-  store.update({ expedition: updatedExpedition, dungeon: updatedDungeon, fight: null, screen: 'dungeon' });
+  store.update({ expedition: updatedExpedition, dungeon: updatedDungeon, fight: null, permanent: updatedPermanent });
   saveGame();
 
   showModal({
@@ -602,7 +741,8 @@ function debugSkipFloor() {
   descendFloor();
 }
 function debugResetExpedition() {
-  backToTitle();
+  goToTavern();
+  store.update({ expedition: null, dungeon: null, fight: null });
 }
 function debugClearSave() {
   clearSave();
@@ -614,9 +754,11 @@ function debugClearSave() {
 // ---------------------------------------------------------------
 
 const actions = {
-  goToPartySelect, backToTitle, toggleCharacterSelect, confirmParty, continueExpedition,
-  moveForward, turnLeft, turnRight, interact, openDiceBag, openExtractPrompt, descendFloor,
-  combatPush, combatRelease,
+  enterGame, goToTavern, backToTitle, goToPartySelect, backToTavernFromPartySelect,
+  toggleCharacterSelect, confirmParty, startExpeditionFromTavern,
+  showCharacterInfo, showMonsterCodex, showDiceLibrary, showStats, toggleMap,
+  goDirection, interact, openDiceBag, openExtractPrompt, descendFloor,
+  combatPush, combatRelease, combatFlee,
   toggleDebugPanel, closeDebugPanel, debugAddDie, debugSetOvercharge, debugDamageParty,
   debugHealParty, debugKillMonster, debugSkipFloor, debugResetExpedition, debugClearSave,
 };

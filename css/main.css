@@ -85,6 +85,15 @@ p { line-height: 1.5; }
   width: 100%;
 }
 
+/* Immersive screens (dungeon, tavern) go completely edge-to-edge — no
+   card padding, no centered max-width — so the phone's full screen is
+   the game, not a boxed widget floating on it. */
+.screen--full-bleed {
+  padding: 0;
+  gap: 0;
+  max-width: none;
+}
+
 /* ---------- Buttons ---------- */
 
 .btn {
@@ -138,6 +147,10 @@ p { line-height: 1.5; }
   text-align: center;
   padding-top: calc(48px + var(--safe-top));
   padding-bottom: calc(40px + var(--safe-bottom));
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(10,10,14,0.55) 0%, rgba(10,10,14,0.75) 55%, var(--c-void) 100%),
+    url('../assets/scenes/brighthollow-castle.jpg') center 30% / cover no-repeat;
 }
 .title-lockup { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 10vh; }
 .title-glyph { font-size: 3rem; filter: drop-shadow(0 0 18px rgba(232,163,61,0.5)); }
@@ -277,3 +290,77 @@ p { line-height: 1.5; }
   padding: 6px;
   color: var(--c-text);
 }
+
+/* ---------- Tavern (home base) ---------- */
+
+.screen--tavern { display: flex; flex-direction: column; }
+
+.tavern-hero {
+  position: relative;
+  min-height: 34vh;
+  background:
+    linear-gradient(180deg, rgba(10,8,6,0.15) 0%, var(--c-void) 100%),
+    url('../assets/scenes/guild-hall.jpg') center 38% / cover no-repeat;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+}
+.tavern-hero-overlay h1 {
+  font-size: 1.7rem;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+.tavern-hero-overlay .title-tag {
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  margin-top: 2px;
+}
+
+.tavern-party-preview {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.party-chip--large {
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-m);
+  flex-direction: column;
+  padding: 10px 16px;
+  gap: 4px;
+  font-size: 1.6rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-surface-line);
+}
+.party-chip-name {
+  font-size: 0.65rem;
+  font-family: var(--font-body);
+  color: var(--c-text-muted);
+}
+
+.tavern-menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.screen--tavern .btn--descend {
+  margin: 0 16px calc(20px + var(--safe-bottom));
+}
+
+/* ---------- Codex / dice library lists (tavern info modals) ---------- */
+
+.codex-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; margin: 10px 0; }
+.codex-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--c-surface-raised);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+}
+.codex-row--unknown { opacity: 0.55; }
+.codex-icon { font-size: 1.4rem; width: 32px; text-align: center; }
+.codex-name { font-weight: 700; color: var(--c-parchment); }
+.codex-desc { font-size: 0.78rem; color: var(--c-text-muted); }

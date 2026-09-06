@@ -8,7 +8,7 @@
 /**
  * Mounts a looping idle animation on an element and returns a
  * stop() function. Call stop() before the element is discarded
- * (or just let a fresh renderCombat/renderDungeon call replace it —
+ * (or just let a fresh renderBattlePanel/renderDungeon call replace it —
  * intervals are cleared explicitly by callers that track them).
  */
 export function playSpriteLoop(el, sprite, fps = 6) {

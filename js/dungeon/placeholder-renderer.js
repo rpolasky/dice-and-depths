@@ -52,6 +52,6 @@ export class PlaceholderDungeonRenderer {
     this.el.occupant.textContent = scene.resolved ? '' : glyph;
     this.el.occupant.dataset.kind = scene.roomKind;
 
-    this.el.farDoor.style.display = scene.depthRemaining <= 0 ? 'none' : 'block';
+    this.el.farDoor.style.display = scene.exits?.forward === false ? 'none' : 'block';
   }
 }

@@ -5,33 +5,39 @@
 
 export const BALANCE = {
   expedition: {
-    startingDiceCapacity: 10,
+    startingDiceCapacity: 12,
     startingPartySize: 3,
     startingGold: 0,
   },
 
   overcharge: {
-    // Thresholds are inclusive lower bounds.
+    // Thresholds are inclusive lower bounds. Rescaled so a realistic
+    // handful of dice (3-8 pushes) reaches a meaningful damage tier —
+    // the old 50/75/100 scale required more dice than a starting bag
+    // even contains.
     thresholds: [
-      { min: 0, max: 49, id: 'normal', label: 'STEADY', damageMult: 1.0 },
-      { min: 50, max: 74, id: 'hot', label: 'OVERCHARGED', damageMult: 1.15 },
-      { min: 75, max: 99, id: 'critical', label: 'CRITICAL', damageMult: 1.35 },
-      { min: 100, max: Infinity, id: 'bust', label: 'OVERLOAD', damageMult: 0 },
+      { min: 0, max: 14, id: 'normal', label: 'STEADY', damageMult: 1.0 },
+      { min: 15, max: 24, id: 'hot', label: 'OVERCHARGED', damageMult: 1.25 },
+      { min: 25, max: 39, id: 'critical', label: 'CRITICAL', damageMult: 1.6 },
+      { min: 40, max: Infinity, id: 'bust', label: 'OVERLOAD', damageMult: 0 },
     ],
-    bustAt: 100,
+    bustAt: 40,
     // Chance a "danger" face on a die instantly triggers bust, before threshold math.
     dangerFaceAlwaysBusts: true,
   },
 
   bust: {
     // Default consequence, individual dice/monsters can override.
-    overchargeLossPercent: 100, // lose this % of accumulated overcharge
+    // Losing everything on every bust (the old default) was too punishing
+    // given how few dice a run has to work with — losing most of it still
+    // stings without ending the fight's momentum entirely.
+    overchargeLossPercent: 60, // lose this % of accumulated overcharge
     monsterActsImmediately: true,
     partyDamage: 0, // additional flat damage, 0 = none by default
   },
 
   dice: {
-    maxBagCapacityUpgradeSteps: [10, 12, 15, 18, 22],
+    maxBagCapacityUpgradeSteps: [12, 15, 18, 22, 26],
   },
 
   search: {

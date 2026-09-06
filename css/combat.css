@@ -1,31 +1,39 @@
 /* ==========================================================
-   COMBAT.CSS — the push-your-luck combat screen. Visual
-   intensity should escalate with the danger threshold.
+   COMBAT.CSS — the push-your-luck battle panel. It renders
+   inline inside #panel-area on the dungeon screen (see
+   dungeon-ui.js / combat-ui.js) rather than as its own screen —
+   visual intensity should still escalate with the danger threshold.
    ========================================================== */
 
-.screen--combat { gap: 12px; }
+.panel-area[data-danger] { display: flex; flex-direction: column; gap: 10px; }
 
 .monster-panel, .overcharge-panel {
   background: var(--c-surface);
   border: 1px solid var(--c-surface-line);
   border-radius: var(--radius-m);
-  padding: 14px;
+  padding: 12px 14px;
 }
 
-.monster-name {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  color: var(--c-parchment);
+.monster-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   margin-bottom: 8px;
 }
+.monster-name {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--c-parchment);
+}
+.monster-hp-text { font-size: 0.8rem; color: var(--c-text-muted); }
 
 .bar {
   position: relative;
-  height: 20px;
+  height: 18px;
   background: var(--c-surface-raised);
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .bar-fill { height: 100%; transition: width 0.35s ease; }
 .bar--hp .bar-fill { background: linear-gradient(90deg, #a83232, #e0574a); }
@@ -36,10 +44,6 @@
   font-size: 0.68rem; font-weight: 700;
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
-.bar-tick {
-  position: absolute; top: 0; bottom: 0; width: 1px;
-  background: rgba(0,0,0,0.4);
-}
 
 .intent-row {
   display: flex;
@@ -47,10 +51,10 @@
   gap: 8px;
   background: var(--c-surface-raised);
   border-radius: var(--radius-s);
-  padding: 8px 10px;
-  font-size: 0.85rem;
+  padding: 7px 10px;
+  font-size: 0.82rem;
 }
-.intent-label { color: var(--c-text-muted); font-size: 0.68rem; letter-spacing: 0.05em; }
+.intent-label { color: var(--c-text-muted); font-size: 0.65rem; letter-spacing: 0.05em; }
 .intent-text { font-weight: 700; color: var(--c-parchment); }
 .intent-detail { color: var(--c-ember); margin-left: auto; }
 .intent-row--danger .intent-detail { color: var(--c-danger-bright); }
@@ -58,34 +62,34 @@
 .overcharge-label {
   font-family: var(--font-display);
   color: var(--c-ember);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   letter-spacing: 0.06em;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .overcharge-numbers {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 0.85rem; margin-bottom: 6px;
+  font-size: 0.82rem; margin-bottom: 4px;
 }
 .threshold-tag {
-  font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
+  font-size: 0.66rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
   background: var(--c-surface-raised);
 }
 .threshold-tag--normal { color: var(--c-text-muted); }
 .threshold-tag--hot { color: var(--c-ember); }
 .threshold-tag--critical { color: var(--c-arcane); background: rgba(139,107,224,0.15); }
-.potential-damage { font-size: 0.85rem; color: var(--c-text-muted); }
+.potential-damage { font-size: 0.82rem; color: var(--c-text-muted); }
 .potential-damage strong { color: var(--c-parchment); }
-.reveal-next { margin-top: 6px; font-size: 0.8rem; color: var(--c-arcane); }
+.reveal-next { margin-top: 4px; font-size: 0.78rem; color: var(--c-arcane); }
 
 .combat-log {
   background: var(--c-void);
   border: 1px solid var(--c-surface-line);
   border-radius: var(--radius-s);
-  padding: 8px 10px;
-  font-size: 0.75rem;
+  padding: 6px 10px;
+  font-size: 0.72rem;
   color: var(--c-text-muted);
-  min-height: 60px;
-  max-height: 96px;
+  min-height: 44px;
+  max-height: 70px;
   overflow-y: auto;
 }
 .log-line { padding: 2px 0; }
@@ -112,34 +116,19 @@
   letter-spacing: 0.03em;
 }
 
-.party-strip--combat { margin-top: auto; }
-
-/* Escalating danger states drive a subtle screen-wide mood shift. */
-.screen--combat[data-danger="hot"] .overcharge-panel { border-color: var(--c-ember-dim); }
-.screen--combat[data-danger="critical"] {
+.btn--flee {
+  margin-top: -2px;
+  font-size: 0.82rem;
+  color: var(--c-text-muted);
+}
+.panel-area[data-danger="hot"] .overcharge-panel { border-color: var(--c-ember-dim); }
+.panel-area[data-danger="critical"] .overcharge-panel {
+  border-color: var(--c-arcane);
   animation: critical-pulse 1.6s ease-in-out infinite;
 }
-.screen--combat[data-danger="critical"] .overcharge-panel { border-color: var(--c-arcane); }
 @keyframes critical-pulse {
-  0%, 100% { background-color: transparent; }
-  50% { background-color: rgba(139,107,224,0.05); }
-}
-
-/* ---------- Monster sprite stage ---------- */
-
-.monster-stage {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  min-height: 96px;
-  margin-bottom: 10px;
-}
-.monster-sprite-wrap { position: relative; }
-.monster-sprite {
-  image-rendering: pixelated;
-  background-repeat: no-repeat;
-  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.55));
+  0%, 100% { background-color: var(--c-surface); }
+  50% { background-color: rgba(139,107,224,0.08); }
 }
 
 /* ---------- Dice roller ---------- */
@@ -149,12 +138,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 0 4px;
+  gap: 4px;
+  padding: 6px 0 2px;
 }
 .die-visual {
-  width: 74px;
-  height: 74px;
+  width: 64px;
+  height: 64px;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -178,9 +167,9 @@
   100% { transform: scale(1); }
 }
 .die-result {
-  min-height: 1.6rem;
+  min-height: 1.5rem;
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--c-parchment);
   animation: die-result-pop 0.25s ease-out;
@@ -191,7 +180,7 @@
 }
 .die-result--crit { color: var(--c-ember); text-shadow: 0 0 12px rgba(232,163,61,0.7); }
 .die-result--heal { color: var(--c-verdant); }
-.die-result--danger { color: var(--c-danger-bright); font-size: 1.7rem; }
+.die-result--danger { color: var(--c-danger-bright); font-size: 1.6rem; }
 .die-result--element { color: var(--c-arcane); }
 
 /* ---------- One-shot FX bursts ---------- */
