@@ -79,6 +79,12 @@ function backToTitle() {
   saveGame();
 }
 
+/** Discards any in-progress expedition and heads to the tavern fresh. Permanent progress (characters, dice, gold) is untouched. */
+function startNewExpeditionFromTitle() {
+  store.update({ screen: 'tavern', expedition: null, dungeon: null, fight: null });
+  saveGame();
+}
+
 function goToPartySelect() {
   const { permanent } = store.get();
   store.update({ screen: 'party-select', pendingParty: permanent.activeParty.slice() });
@@ -754,7 +760,7 @@ function debugClearSave() {
 // ---------------------------------------------------------------
 
 const actions = {
-  enterGame, goToTavern, backToTitle, goToPartySelect, backToTavernFromPartySelect,
+  enterGame, goToTavern, backToTitle, startNewExpeditionFromTitle, goToPartySelect, backToTavernFromPartySelect,
   toggleCharacterSelect, confirmParty, startExpeditionFromTavern,
   showCharacterInfo, showMonsterCodex, showDiceLibrary, showStats, toggleMap,
   goDirection, interact, openDiceBag, openExtractPrompt, descendFloor,

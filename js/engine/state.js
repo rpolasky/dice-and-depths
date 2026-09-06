@@ -8,7 +8,7 @@ import { BALANCE } from '../data/balance.js';
 
 function freshState() {
   return {
-    saveVersion: 2,
+    saveVersion: 3,
 
     // PERMANENT PROGRESSION (persists across expeditions/death)
     permanent: {

@@ -52,6 +52,7 @@ function renderTitle(root, state, actions) {
         <button class="btn btn--primary btn--large" data-action="enter">
           ${resuming ? 'RESUME EXPEDITION' : 'ENTER THE GUILD HALL'}
         </button>
+        ${resuming ? '<button class="btn btn--text" data-action="new-game">Abandon it and start fresh</button>' : ''}
       </div>
       <div class="title-meta">
         <span>Highest floor reached: ${state.permanent.highestFloorReached}</span>
@@ -60,6 +61,8 @@ function renderTitle(root, state, actions) {
     </div>
   `;
   root.querySelector('[data-action="enter"]').addEventListener('click', actions.enterGame);
+  const newGameBtn = root.querySelector('[data-action="new-game"]');
+  if (newGameBtn) newGameBtn.addEventListener('click', actions.startNewExpeditionFromTitle);
 }
 
 // ---------------------------------------------------------------

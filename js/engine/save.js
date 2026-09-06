@@ -7,7 +7,7 @@
 import { store, freshState } from './state.js';
 
 const SAVE_KEY = 'dicecrawl_save_v1';
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 const migrations = {
   // v1 saves predate the tavern hub (activeParty/monsterCodex/stats) and
@@ -22,7 +22,33 @@ const migrations = {
       ...data.permanent,
     },
   }),
+  // v2 saves predate the branching-maze rework: `dungeon.floor.rooms` was
+  // a flat array indexed by `dungeon.roomIndex`, not an object keyed by
+  // "x,y" coordinate with `dungeon.position`. There's no sane way to
+  // convert an old linear corridor into a maze, so any in-progress
+  // expedition/dungeon from a v2 save is discarded — permanent progress
+  // (characters, dice, gold, stats) is unaffected.
+  2: (data) => ({
+    ...data,
+    saveVersion: 3,
+    expedition: null,
+    dungeon: null,
+  }),
 };
+
+/** True if a saved dungeon actually matches the current maze data shape. */
+function isValidDungeon(dungeon) {
+  return !!(
+    dungeon &&
+    dungeon.floor &&
+    dungeon.floor.rooms &&
+    typeof dungeon.floor.rooms === 'object' &&
+    !Array.isArray(dungeon.floor.rooms) &&
+    dungeon.position &&
+    typeof dungeon.position.x === 'number' &&
+    typeof dungeon.position.y === 'number'
+  );
+}
 
 export function saveGame() {
   try {
@@ -41,6 +67,11 @@ export function loadGame() {
     if (!raw) return false;
     let data = JSON.parse(raw);
     data = runMigrations(data);
+    // Defense in depth: never trust a saved dungeon that doesn't match
+    // the current shape, whatever the version number claims.
+    if (!isValidDungeon(data.dungeon)) {
+      data = { ...data, dungeon: null, expedition: null };
+    }
     store.update({ ...freshState(), ...data, screen: 'title' });
     return true;
   } catch (err) {
