@@ -1,0 +1,30 @@
+/* ==========================================================
+   CARDS.CSS — shared "card" framing used for character cards
+   and die-choice cards, plus rarity accenting.
+   ========================================================== */
+
+.character-card, .die-choice {
+  position: relative;
+}
+
+.character-card::before, .die-choice::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
+  border: 1px solid rgba(232, 163, 61, 0.12);
+  border-radius: calc(var(--radius-m) - 4px);
+  pointer-events: none;
+}
+
+/* Dice rarity accent bar along the left edge */
+.die-choice { border-left-width: 3px; }
+.die-choice--common { border-left-color: var(--c-text-muted); }
+.die-choice--uncommon { border-left-color: var(--c-verdant); }
+.die-choice--rare, .die-choice--ember { border-left-color: var(--c-ember); }
+.die-choice--cursed, .die-choice--void { border-left-color: var(--c-danger); }
+.die-choice--arcane { border-left-color: var(--c-arcane); }
+.die-choice--gold { border-left-color: var(--c-ember); }
+.die-choice--stone { border-left-color: var(--c-text-muted); }
+.die-choice--verdant { border-left-color: var(--c-verdant); }
+
+.die-choice:active, .character-card:active { transform: scale(0.98); }

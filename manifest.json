@@ -1,0 +1,16 @@
+{
+  "name": "Dice & Depths",
+  "short_name": "Dice & Depths",
+  "description": "A push-your-luck, first-person dungeon RPG built around expendable dice.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0e13",
+  "theme_color": "#0d0e13",
+  "icons": [
+    { "src": "./assets/placeholder/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/placeholder/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/placeholder/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

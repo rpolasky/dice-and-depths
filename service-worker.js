@@ -1,0 +1,100 @@
+// ============================================================
+// SERVICE-WORKER.JS — precaches the app shell so the game keeps
+// working offline after the first successful load.
+//
+// Bump CACHE_NAME whenever you ship new files so old caches are
+// cleared out automatically.
+// ============================================================
+
+const CACHE_NAME = 'dice-and-depths-v1';
+
+const PRECACHE_URLS = [
+  './',
+  './index.html',
+  './manifest.json',
+
+  './css/main.css',
+  './css/dungeon.css',
+  './css/combat.css',
+  './css/cards.css',
+  './css/responsive.css',
+
+  './js/main.js',
+  './js/game.js',
+
+  './js/data/balance.js',
+  './js/data/character-data.js',
+  './js/data/content-data.js',
+  './js/data/dice-data.js',
+  './js/data/floor-data.js',
+  './js/data/monster-data.js',
+
+  './js/engine/dice-engine.js',
+  './js/engine/overcharge.js',
+  './js/engine/save.js',
+  './js/engine/state.js',
+
+  './js/combat/combat.js',
+  './js/combat/monster-intent.js',
+
+  './js/dungeon/dungeon.js',
+  './js/dungeon/encounters.js',
+  './js/dungeon/movement.js',
+  './js/dungeon/placeholder-renderer.js',
+  './js/dungeon/renderer.js',
+
+  './js/progression/progression.js',
+
+  './js/ui/combat-ui.js',
+  './js/ui/debug-panel.js',
+  './js/ui/dungeon-ui.js',
+  './js/ui/modal.js',
+  './js/ui/ui.js',
+
+  './assets/placeholder/icon.svg',
+  './assets/placeholder/icon-192.svg',
+  './assets/placeholder/icon-512.svg',
+  './assets/characters/paladin.svg',
+  './assets/characters/rogue.svg',
+  './assets/characters/mage.svg',
+  './assets/characters/berserker.svg',
+  './assets/characters/cleric.svg',
+  './assets/characters/scout.svg',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Cache-first for app-shell assets, falling back to network, then
+// re-caching whatever we fetch so new content is picked up over time.
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
+});

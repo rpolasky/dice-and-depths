@@ -1,0 +1,43 @@
+/* ==========================================================
+   RESPONSIVE.CSS — portrait phones are the primary target;
+   this file only adjusts for larger portrait phones and for
+   desktop/tablet fallback (secondary priority per design brief).
+   ========================================================== */
+
+/* Larger phones (412x915 and similar) */
+@media (min-width: 400px) {
+  .screen { padding-left: 20px; padding-right: 20px; }
+  .character-icon { font-size: 1.8rem; }
+}
+
+/* Small phones (360x800) — tighten spacing slightly */
+@media (max-width: 370px) {
+  .screen { gap: 10px; padding: 12px; }
+  .btn { padding: 12px 14px; font-size: 0.92rem; }
+  .corridor-occupant { font-size: 2.1rem; }
+}
+
+/* Short viewports (landscape phones, small height) */
+@media (max-height: 620px) {
+  .corridor { aspect-ratio: 16 / 9; }
+  .title-lockup { margin-top: 4vh; }
+}
+
+/* Desktop / tablet — secondary support, keep the mobile frame centered */
+@media (min-width: 700px) {
+  body {
+    display: flex;
+    justify-content: center;
+  }
+  #app {
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 0 0 1px var(--c-surface-line), 0 40px 80px -30px rgba(0,0,0,0.8);
+    border-radius: 28px;
+    overflow: hidden;
+    min-height: 92vh;
+    margin: 4vh auto;
+  }
+  #dev-tab { left: calc(50% - 230px + 8px); }
+  .debug-panel { left: calc(50% - 230px + 8px); right: auto; }
+}
