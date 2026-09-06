@@ -99,6 +99,40 @@
 
 .corridor--boss .corridor-far-door { border-color: var(--c-danger); box-shadow: 0 0 26px -2px var(--c-danger) inset; }
 
+/* ---------- Photo-tile corridor (ImageDungeonRenderer) ---------- */
+
+.corridor--photo { background: var(--fog-color, var(--c-void)); }
+
+.corridor-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.25s ease;
+}
+.corridor--photo[data-resolved="true"] .corridor-photo {
+  filter: saturate(0.7) brightness(0.72);
+}
+
+.corridor-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-color, var(--c-ember));
+  opacity: 0.10;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.corridor-monster-sprite {
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6));
+}
+
+.corridor--photo .corridor-torch { top: 44%; }
+.corridor--photo .corridor-torch--left { left: 14%; }
+.corridor--photo .corridor-torch--right { right: 14%; }
+
 /* ---------- Room banner ---------- */
 
 .room-banner {

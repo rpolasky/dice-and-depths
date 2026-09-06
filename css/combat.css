@@ -124,3 +124,96 @@
   0%, 100% { background-color: transparent; }
   50% { background-color: rgba(139,107,224,0.05); }
 }
+
+/* ---------- Monster sprite stage ---------- */
+
+.monster-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 96px;
+  margin-bottom: 10px;
+}
+.monster-sprite-wrap { position: relative; }
+.monster-sprite {
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.55));
+}
+
+/* ---------- Dice roller ---------- */
+
+.dice-roller {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+}
+.die-visual {
+  width: 74px;
+  height: 74px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5));
+  transition: transform 0.15s ease;
+}
+.die-visual--rolling {
+  animation: die-spin 0.42s linear infinite;
+}
+.die-visual--landed {
+  animation: die-land 0.28s ease-out;
+}
+@keyframes die-spin {
+  0% { transform: rotate3d(0.6, 1, 0.2, 0deg) scale(1); }
+  50% { transform: rotate3d(0.6, 1, 0.2, 200deg) scale(0.92); }
+  100% { transform: rotate3d(0.6, 1, 0.2, 380deg) scale(1); }
+}
+@keyframes die-land {
+  0% { transform: scale(1.35); }
+  60% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+.die-result {
+  min-height: 1.6rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--c-parchment);
+  animation: die-result-pop 0.25s ease-out;
+}
+@keyframes die-result-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.die-result--crit { color: var(--c-ember); text-shadow: 0 0 12px rgba(232,163,61,0.7); }
+.die-result--heal { color: var(--c-verdant); }
+.die-result--danger { color: var(--c-danger-bright); font-size: 1.7rem; }
+.die-result--element { color: var(--c-arcane); }
+
+/* ---------- One-shot FX bursts ---------- */
+
+.fx-burst {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 5;
+}
+.fx-burst--danger { filter: hue-rotate(140deg) saturate(1.4); }
+
+/* ---------- Bust screen shake ---------- */
+
+.screen--shake { animation: screen-shake 0.42s ease-in-out; }
+@keyframes screen-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(4px); }
+}

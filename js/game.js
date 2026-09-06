@@ -16,6 +16,7 @@ import { getMonsterDef } from './data/monster-data.js';
 import { getCharacterDef } from './data/character-data.js';
 import { getDieDef } from './data/dice-data.js';
 import { getPuzzle } from './data/content-data.js';
+import { DIE_THEME_ART } from './data/sprite-data.js';
 import { BALANCE } from './data/balance.js';
 import * as UI from './ui/ui.js';
 import { showModal, closeModal } from './ui/modal.js';
@@ -182,8 +183,11 @@ function openTreasureModal() {
     bodyHtml: `<p>Choose one die to add to your bag.</p>
       <div class="die-choice-row">
         ${choices.map((d, i) => `<button class="die-choice die-choice--${d.theme}" data-i="${i}">
-          <div class="die-choice-name">${d.name}</div>
-          <div class="die-choice-desc">${d.description}</div>
+          <div class="die-choice-art" style="background-image:url(${DIE_THEME_ART[d.theme] || ''})"></div>
+          <div class="die-choice-text">
+            <div class="die-choice-name">${d.name}</div>
+            <div class="die-choice-desc">${d.description}</div>
+          </div>
         </button>`).join('')}
       </div>`,
     buttons: [],
@@ -465,8 +469,11 @@ function combatPush() {
           ${updatedFight.pendingChoice.candidates.map((c, i) => {
             const def = getDieDef(c.dieId);
             return `<button class="die-choice die-choice--${def.theme}" data-instance="${c.instanceId}">
-              <div class="die-choice-name">${def.name}</div>
-              <div class="die-choice-desc">${def.description}</div>
+              <div class="die-choice-art" style="background-image:url(${DIE_THEME_ART[def.theme] || ''})"></div>
+              <div class="die-choice-text">
+                <div class="die-choice-name">${def.name}</div>
+                <div class="die-choice-desc">${def.description}</div>
+              </div>
             </button>`;
           }).join('')}
         </div>`,

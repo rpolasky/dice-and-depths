@@ -7,15 +7,15 @@
 
 export const REGIONS = [
   { id: 'forgotten_halls', name: 'The Forgotten Halls', floors: [1, 10], theme: 'stone',
-    monsterPool: ['goblin', 'skeleton', 'orc_guard', 'cave_spider', 'goblin_warlord'] },
+    monsterPool: ['goblin', 'skeleton', 'batilisk', 'lizard_monk', 'goblin_brute'] },
   { id: 'catacombs', name: 'The Catacombs', floors: [11, 20], theme: 'bone',
-    monsterPool: ['skeleton', 'wraith', 'mimic', 'bog_shaman'] },
+    monsterPool: ['skeleton', 'skeleton_knight', 'ghost', 'bogslium', 'orc_archer'] },
   { id: 'infernal_depths', name: 'The Infernal Depths', floors: [21, 30], theme: 'ember',
-    monsterPool: ['bog_shaman', 'stone_golem', 'wraith', 'dragon_whelp'] },
+    monsterPool: ['bogslium', 'minotaur', 'ghost', 'dragon'] },
   { id: 'astral_ruins', name: 'The Astral Ruins', floors: [31, 40], theme: 'arcane',
-    monsterPool: ['wraith', 'stone_golem', 'mimic'] },
+    monsterPool: ['ghost', 'minotaur', 'orc_archer'] },
   { id: 'abyss', name: 'The Abyss', floors: [41, 50], theme: 'void',
-    monsterPool: ['stone_golem', 'dragon_whelp', 'wraith'] },
+    monsterPool: ['minotaur', 'dragon', 'ghost'] },
 ];
 
 export function getRegionForFloor(floorNumber) {

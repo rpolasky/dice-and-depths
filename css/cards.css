@@ -26,5 +26,6 @@
 .die-choice--gold { border-left-color: var(--c-ember); }
 .die-choice--stone { border-left-color: var(--c-text-muted); }
 .die-choice--verdant { border-left-color: var(--c-verdant); }
+.die-choice--lucky { border-left-color: var(--c-ember-dim); }
 
 .die-choice:active, .character-card:active { transform: scale(0.98); }

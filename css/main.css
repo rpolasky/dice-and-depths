@@ -214,9 +214,21 @@ p { line-height: 1.5; }
   background: var(--c-surface-raised);
   border: 1px solid var(--c-surface-line);
   border-radius: var(--radius-m);
-  padding: 12px 14px;
+  padding: 10px 14px;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+.die-choice-art {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.die-choice-text { flex: 1; min-width: 0; }
 .die-choice-name { font-weight: 700; color: var(--c-parchment); }
 .die-choice-desc { color: var(--c-text-muted); font-size: 0.82rem; margin-top: 2px; }
 .die-choice--gold { border-color: var(--c-ember); }

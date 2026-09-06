@@ -95,7 +95,7 @@ export const DICE_DATA = {
     id: 'lucky_die',
     name: 'Lucky Die',
     rarity: 'rare',
-    theme: 'gold',
+    theme: 'lucky',
     cursed: false,
     description: 'A rare find. One face rolls itself back into your bag.',
     faces: [

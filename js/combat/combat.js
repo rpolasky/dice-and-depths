@@ -12,6 +12,15 @@ import { getThreshold, isBustValue, computeReleaseDamage, bustCeiling } from '..
 import { createMonsterState, currentIntent, resolveIntent, describeIntent } from './monster-intent.js';
 import { BALANCE } from '../data/balance.js';
 
+// Monotonic counter so the UI can tell "a new event just happened" apart
+// from "the screen re-rendered for an unrelated reason" — fight objects
+// are rebuilt on every action, so a plain type string isn't enough to
+// detect a fresh occurrence (e.g. two rolls in a row could both be 'roll').
+let eventSeq = 0;
+function stampEvent(type, extra = {}) {
+  return { type, seq: ++eventSeq, ...extra };
+}
+
 /** Builds a lookup of active abilities for the current party, by hook name. */
 function abilitiesByHook(partyIds) {
   const map = {};
@@ -139,13 +148,16 @@ export function resolvePush(fight, chosenInstanceId) {
 
   if (bustTriggered) {
     nextFight = applyBust(nextFight);
+    nextFight.lastEvent = stampEvent('bust', { face });
     return { fight: nextFight, result: { type: 'bust', face, healAmount } };
   }
 
   if (healAmount > 0) {
+    nextFight.lastEvent = stampEvent('heal', { face, healAmount });
     return { fight: nextFight, result: { type: 'heal', face, healAmount } };
   }
 
+  nextFight.lastEvent = stampEvent(face.type === 'crit' ? 'crit-roll' : 'roll', { face });
   return { fight: nextFight, result: { type: 'roll', face } };
 }
 
@@ -202,9 +214,11 @@ export function release(fight) {
 
   if (monster.currentHp <= 0) {
     nextFight.outcome = 'victory';
+    nextFight.lastEvent = stampEvent('victory', { damage });
     return { fight: nextFight, result: { type: 'victory', damage } };
   }
 
+  nextFight.lastEvent = stampEvent('release', { damage });
   return { fight: nextFight, result: { type: 'release', damage } };
 }
 

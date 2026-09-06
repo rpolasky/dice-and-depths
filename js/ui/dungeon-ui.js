@@ -93,6 +93,8 @@ function mountScene(dungeon, room, depthRemaining) {
   renderer.renderScene({
     theme: dungeon.floor.theme,
     roomKind: room.kind,
+    room,
+    monsterId: room.monsterId,
     direction: dungeon.position.direction,
     depthRemaining,
     resolved: room.resolved,
