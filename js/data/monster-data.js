@@ -22,25 +22,25 @@
 
 export const MONSTER_DATA = {
   goblin: {
-    id: 'goblin', name: 'Goblin', icon: '👺', hp: 22, tier: 1,
+    id: 'goblin', name: 'Goblin', icon: '👺', hp: 55, tier: 1,
     intentPattern: [{ kind: 'attack', value: 7, label: 'Spear Jab' }],
-    rewards: { diceChance: 0.4, diceOptions: ['basic_die'], gold: [5, 15] },
+    rewards: { diceChance: 0.65, diceOptions: ['basic_die'], gold: [5, 15] },
   },
   skeleton: {
-    id: 'skeleton', name: 'Skeleton', icon: '💀', hp: 20, tier: 1,
+    id: 'skeleton', name: 'Skeleton', icon: '💀', hp: 48, tier: 1,
     intentPattern: [{ kind: 'attack', value: 6, label: 'Bone Slash' }],
-    rewards: { diceChance: 0.35, diceOptions: ['basic_die'], gold: [5, 15] },
+    rewards: { diceChance: 0.6, diceOptions: ['basic_die'], gold: [5, 15] },
   },
   batilisk: {
-    id: 'batilisk', name: 'Batilisk', icon: '🦇', hp: 16, tier: 1,
+    id: 'batilisk', name: 'Batilisk', icon: '🦇', hp: 46, tier: 1,
     intentPattern: [
       { kind: 'web', label: 'Disorienting Shriek' },
       { kind: 'attack', value: 7, label: 'Swoop' },
     ],
-    rewards: { diceChance: 0.3, diceOptions: ['basic_die'], gold: [5, 10] },
+    rewards: { diceChance: 0.55, diceOptions: ['basic_die'], gold: [5, 10] },
   },
   lizard_monk: {
-    id: 'lizard_monk', name: 'Lizard Monk', icon: '🦎', hp: 34, tier: 2,
+    id: 'lizard_monk', name: 'Lizard Monk', icon: '🦎', hp: 56, tier: 2,
     intentPattern: [
       { kind: 'guard', value: 25, label: 'Meditate' },
       { kind: 'attack', value: 10, label: 'Palm Strike' },
@@ -48,7 +48,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.5, diceOptions: ['basic_die', 'power_die'], gold: [15, 30] },
   },
   goblin_brute: {
-    id: 'goblin_brute', name: 'Goblin Brute', icon: '👹', hp: 48, tier: 2,
+    id: 'goblin_brute', name: 'Goblin Brute', icon: '👹', hp: 78, tier: 2,
     intentPattern: [
       { kind: 'attack', value: 12, label: 'Heavy Strike' },
       { kind: 'guard', value: 20, label: 'Hunker Down' },
@@ -57,7 +57,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.8, diceOptions: ['power_die', 'basic_die'], gold: [30, 60] },
   },
   skeleton_knight: {
-    id: 'skeleton_knight', name: 'Skeleton Knight', icon: '🗡️', hp: 55, tier: 2,
+    id: 'skeleton_knight', name: 'Skeleton Knight', icon: '🗡️', hp: 88, tier: 2,
     intentPattern: [
       { kind: 'guard', value: 30, label: 'Raise Shield' },
       { kind: 'attack', value: 14, label: 'Blade Slam' },
@@ -65,7 +65,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.7, diceOptions: ['power_die'], gold: [40, 70] },
   },
   orc_archer: {
-    id: 'orc_archer', name: 'Orc Archer', icon: '🏹', hp: 26, tier: 2,
+    id: 'orc_archer', name: 'Orc Archer', icon: '🏹', hp: 44, tier: 2,
     intentPattern: [
       { kind: 'steal', label: 'Snipe' },
       { kind: 'attack', value: 9, label: 'Volley' },
@@ -73,7 +73,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.9, diceOptions: ['lucky_die', 'power_die'], gold: [20, 50] },
   },
   bogslium: {
-    id: 'bogslium', name: 'Bogslium', icon: '🟢', hp: 30, tier: 2,
+    id: 'bogslium', name: 'Bogslium', icon: '🟢', hp: 50, tier: 2,
     intentPattern: [
       { kind: 'curse', label: 'Fester' },
       { kind: 'attack', value: 8, label: 'Muck Slam' },
@@ -81,7 +81,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.6, diceOptions: ['elemental_die'], gold: [15, 25] },
   },
   ghost: {
-    id: 'ghost', name: 'Ghost', icon: '👻', hp: 32, tier: 2,
+    id: 'ghost', name: 'Ghost', icon: '👻', hp: 52, tier: 2,
     intentPattern: [
       { kind: 'attack', value: 9, label: 'Chilling Touch' },
       { kind: 'curse', label: 'Haunt' },
@@ -89,7 +89,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.5, diceOptions: ['cursed_die', 'critical_die'], gold: [20, 35] },
   },
   minotaur: {
-    id: 'minotaur', name: 'Minotaur', icon: '🐂', hp: 65, tier: 3,
+    id: 'minotaur', name: 'Minotaur', icon: '🐂', hp: 105, tier: 3,
     intentPattern: [
       { kind: 'attack', value: 11, label: 'Axe Swing' },
       { kind: 'guard', value: 20, label: 'Brace' },
@@ -98,7 +98,7 @@ export const MONSTER_DATA = {
     rewards: { diceChance: 0.75, diceOptions: ['power_die', 'critical_die'], gold: [45, 75] },
   },
   dragon: {
-    id: 'dragon', name: 'Dragon', icon: '🐉', hp: 110, tier: 3,
+    id: 'dragon', name: 'Dragon', icon: '🐉', hp: 175, tier: 3,
     boss: true,
     intentPattern: [
       { kind: 'attack', value: 10, label: 'Claw' },

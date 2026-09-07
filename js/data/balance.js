@@ -5,7 +5,7 @@
 
 export const BALANCE = {
   expedition: {
-    startingDiceCapacity: 12,
+    startingDiceCapacity: 16,
     startingPartySize: 3,
     startingGold: 0,
   },

@@ -6,7 +6,7 @@
 // cleared out automatically.
 // ============================================================
 
-const CACHE_NAME = 'dice-and-depths-v9';
+const CACHE_NAME = 'dice-and-depths-v10';
 
 const PRECACHE_URLS = [
   './',

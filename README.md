@@ -34,6 +34,44 @@ your explicit upload.
 
 ---
 
+## Latest pass: the combat loop was a solved math problem — fixed the structure, not the numbers
+
+Direct playtesting feedback: "roll, roll, roll... release, done. I never got hit. There's no
+point." That's not a tuning complaint — it was correct. Under the old rules, pushing had zero
+cost and releasing non-lethally only ever *invited* a free hit for no benefit, so "push until
+safely lethal, release" wasn't a strategy the player found, it was the only mathematically
+correct one. The monster-attacks-back system was unreachable by construction.
+
+**What changed (`js/combat/combat.js`, `js/data/monster-data.js`, `js/data/balance.js`):**
+
+- **Combo system.** Every push tracks per-VALUE hit counts for the current streak (order doesn't
+  matter — a `1,2,2,3,4,2` sequence still counts as three 2's). Rolling a value again multiplies
+  *that roll's* Overcharge contribution: 2nd occurrence = ×2, 3rd = ×3 (capped there, so a
+  high-value die can't spike absurdly). `fight.streakRolls` holds the ordered history for the UI;
+  `fight.faceCounts` drives the actual math. Both reset on bust or release.
+- **Overkill is capped at the monster's remaining HP** — pushing past lethal is now provably
+  wasted, not just "fine," which is what makes releasing at the *right* moment instead of the
+  *maximum* moment an actual decision.
+- **Monster HP and dice-drop rates were retuned together, iteratively, using a small simulation
+  harness** (a scripted "reasonably careful" bot ran hundreds of trials per monster) rather than
+  guessing. The first HP bump alone didn't work — combos were *also* inflating single-release
+  damage, so fights still resolved in exactly one release; only running the simulation caught
+  that. Landed on tier-1 HP roughly 2-2.5x the original values, with tier-2/3 scaled
+  proportionally, and non-lethal releases now have a real chance to knock loose a die
+  immediately (separate from the guaranteed-chance drop on an actual kill).
+- Starting dice capacity raised (12→16) to match fights now genuinely taking more pushes.
+
+**New in the battle overlay:** a combo strip in the dice zone shows the current streak's rolls as
+chips; when a value repeats, every matching chip (not just the newest one) boxes and glows
+together, and a "×N COMBO! +N" popup slams up into the Overcharge bar.
+
+Verified via a dedicated logic-test pass (combo math, faceCounts/streakRolls reset correctly on
+both bust and release, overkill never exceeds remaining HP, mid-fight drops resolve to real die
+ids) and a DOM test confirming the visual layer actually fires during real play, not just that
+the math is correct in isolation.
+
+---
+
 ## Latest pass: real dice art, real numerals, and a real animation bug fix
 
 **New art, all provided by the project owner (no license required):**

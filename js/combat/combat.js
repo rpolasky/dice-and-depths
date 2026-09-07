@@ -54,6 +54,8 @@ export function startCombat({ monsterId, partyIds, bag, characterLevels = {} }) 
     lastRoll: null,
     lastEvent: null,
     partyDamageEvent: null,
+    faceCounts: {}, // per-value hit counts for the current push-streak (combo system)
+    streakRolls: [], // ordered {value, multiplier} for the current push-streak, for the UI's combo strip
   };
 }
 
@@ -98,6 +100,23 @@ export function push(fight) {
 }
 
 /** Called after the player picks which die to roll (Paladin ability), or directly for normal pushes. */
+// Combo: rolling the same face VALUE again later in the same push-streak
+// (order doesn't matter, only count) multiplies THAT roll's contribution
+// to Overcharge. Capped at x3 so a high-value die (e.g. the critical die's
+// 14) can't spike to absurd single-roll totals.
+const COMBO_MAX_MULTIPLIER = 3;
+
+/** Registers a numeric-face hit against the streak's running per-value
+ *  counts and returns how much Overcharge it actually contributes. */
+function applyComboToFace(faceCounts, value) {
+  const counts = { ...faceCounts };
+  counts[value] = (counts[value] || 0) + 1;
+  const comboCount = counts[value];
+  const multiplier = Math.min(comboCount, COMBO_MAX_MULTIPLIER);
+  const totalValue = value * multiplier;
+  return { counts, comboCount, multiplier, totalValue };
+}
+
 export function resolvePush(fight, chosenInstanceId) {
   let bag = fight.bag;
   let dieInstance;
@@ -122,11 +141,14 @@ export function resolvePush(fight, chosenInstanceId) {
   const face = DiceEngine.rollDie(dieInstance);
   const log = fight.log.slice();
   let overcharge = fight.overcharge;
+  let faceCounts = fight.faceCounts;
   let consecutivePushes = fight.consecutivePushes;
+  let streakRolls = fight.streakRolls;
   let outcome = null;
   let healAmount = 0;
   let bustTriggered = false;
   let clericCredit = null;
+  let comboInfo = null;
   let webWasActive = fight.webActive;
 
   // Web debuff: adds a flat chance of an automatic bust on this push.
@@ -143,9 +165,17 @@ export function resolvePush(fight, chosenInstanceId) {
     if (clericBoost) clericCredit = { characterId: clericBoost.characterId, hook: 'onHealingDieBoost' };
     log.push(`${face.dieName} heals the party for ${healAmount}.`);
   } else {
-    overcharge += face.value;
+    const combo = applyComboToFace(faceCounts, face.value);
+    faceCounts = combo.counts;
+    overcharge += combo.totalValue;
     consecutivePushes += 1;
-    log.push(`${face.dieName} rolled ${face.value}${face.type === 'crit' ? ' — CRITICAL!' : ''}${face.type === 'element' ? ` (${face.element})` : ''}. Overcharge: ${overcharge}.`);
+    streakRolls = streakRolls.concat({ value: face.value, multiplier: combo.multiplier });
+    if (combo.multiplier > 1) {
+      comboInfo = { value: face.value, comboCount: combo.comboCount, multiplier: combo.multiplier, total: combo.totalValue };
+      log.push(`${face.dieName} rolled ${face.value} — ×${combo.multiplier} COMBO! (+${combo.totalValue}). Overcharge: ${overcharge}.`);
+    } else {
+      log.push(`${face.dieName} rolled ${face.value}${face.type === 'crit' ? ' — CRITICAL!' : ''}${face.type === 'element' ? ` (${face.element})` : ''}. Overcharge: ${overcharge}.`);
+    }
     if (isBustValue(overcharge)) bustTriggered = true;
   }
 
@@ -153,6 +183,8 @@ export function resolvePush(fight, chosenInstanceId) {
     ...fight,
     bag,
     overcharge,
+    faceCounts,
+    streakRolls,
     consecutivePushes,
     pendingChoice: null,
     webActive: webWasActive && !bustTriggered ? false : fight.webActive, // web consumed after one push attempt
@@ -172,8 +204,8 @@ export function resolvePush(fight, chosenInstanceId) {
     return { fight: nextFight, result: { type: 'heal', face, healAmount } };
   }
 
-  nextFight.lastEvent = stampEvent(face.type === 'crit' ? 'crit-roll' : 'roll', { face });
-  return { fight: nextFight, result: { type: 'roll', face } };
+  nextFight.lastEvent = stampEvent(face.type === 'crit' ? 'crit-roll' : 'roll', { face, comboInfo });
+  return { fight: nextFight, result: { type: 'roll', face, comboInfo } };
 }
 
 /**
@@ -195,10 +227,13 @@ function resolveDualWieldPush(fight) {
   const faces = dice.map((d) => DiceEngine.rollDie(d));
   const log = fight.log.slice();
   let overcharge = fight.overcharge;
+  let faceCounts = fight.faceCounts;
+  let streakRolls = fight.streakRolls;
   let consecutivePushes = fight.consecutivePushes;
   let healAmount = 0;
   let bustTriggered = fight.webActive ? Math.random() < 0.2 : false;
   let clericCredit = null;
+  let comboInfo = null;
   const overchargeBefore = fight.overcharge;
 
   for (const face of faces) {
@@ -212,9 +247,17 @@ function resolveDualWieldPush(fight) {
       if (clericBoost) clericCredit = { characterId: clericBoost.characterId, hook: 'onHealingDieBoost' };
       log.push(`${face.dieName} heals the party for ${amt}.`);
     } else {
-      overcharge += face.value;
+      const combo = applyComboToFace(faceCounts, face.value);
+      faceCounts = combo.counts;
+      overcharge += combo.totalValue;
       consecutivePushes += 1;
-      log.push(`${face.dieName} rolled ${face.value}${face.type === 'crit' ? ' — CRITICAL!' : ''}${face.type === 'element' ? ` (${face.element})` : ''}.`);
+      streakRolls = streakRolls.concat({ value: face.value, multiplier: combo.multiplier });
+      if (combo.multiplier > 1) {
+        comboInfo = { value: face.value, comboCount: combo.comboCount, multiplier: combo.multiplier, total: combo.totalValue };
+        log.push(`${face.dieName} rolled ${face.value} — ×${combo.multiplier} COMBO! (+${combo.totalValue}).`);
+      } else {
+        log.push(`${face.dieName} rolled ${face.value}${face.type === 'crit' ? ' — CRITICAL!' : ''}${face.type === 'element' ? ` (${face.element})` : ''}.`);
+      }
     }
   }
   if (dice.length === 2) log.push(`🗡️ Dual Wield: both blades strike! Overcharge: ${overcharge}.`);
@@ -227,7 +270,7 @@ function resolveDualWieldPush(fight) {
   };
 
   let nextFight = {
-    ...fight, bag, overcharge, consecutivePushes,
+    ...fight, bag, overcharge, faceCounts, streakRolls, consecutivePushes,
     pendingChoice: null, webActive: false, log, lastRoll: combinedFace,
   };
 
@@ -241,8 +284,8 @@ function resolveDualWieldPush(fight) {
     nextFight.lastEvent = stampEvent('heal', { face: combinedFace, healAmount, abilityCredit: clericCredit });
     return { fight: nextFight, result: { type: 'heal', face: combinedFace, healAmount } };
   }
-  nextFight.lastEvent = stampEvent(combinedFace.type === 'crit' ? 'crit-roll' : 'roll', { face: combinedFace });
-  return { fight: nextFight, result: { type: 'roll', face: combinedFace, healAmount } };
+  nextFight.lastEvent = stampEvent(combinedFace.type === 'crit' ? 'crit-roll' : 'roll', { face: combinedFace, comboInfo });
+  return { fight: nextFight, result: { type: 'roll', face: combinedFace, healAmount, comboInfo } };
 }
 
 function applyBust(fight) {
@@ -269,6 +312,8 @@ function applyBust(fight) {
     overcharge: overchargeAfter,
     bustCountThisFight,
     consecutivePushes: 0,
+    faceCounts: {}, // combo progress always fully resets on bust, even though Overcharge only partially drains
+    streakRolls: [],
     log,
     abilityCredit: mitigatedByRogue ? { characterId: rogueAbility.characterId, hook: 'onFirstBustMitigate' } : null,
   };
@@ -289,27 +334,45 @@ export function release(fight) {
   if (fight.monster.pendingGuardPercent) {
     damage = Math.round(damage * (1 - fight.monster.pendingGuardPercent / 100));
   }
+  const overkill = Math.max(0, damage - fight.monster.currentHp);
+  // Overkill is genuinely wasted, not just "fine" — this is what makes
+  // releasing at the RIGHT moment a real decision instead of "always
+  // build to the biggest number you safely can."
+  damage = Math.min(damage, fight.monster.currentHp);
 
   const monster = { ...fight.monster, currentHp: Math.max(0, fight.monster.currentHp - damage), pendingGuardPercent: 0 };
   const log = fight.log.slice();
-  log.push(`⚡ RELEASE for ${damage} damage! (${fight.overcharge} Overcharge)`);
+  log.push(`⚡ RELEASE for ${damage} damage!${overkill > 0 ? ` (${overkill} wasted on overkill)` : ''} (${fight.overcharge} Overcharge)`);
 
   let nextFight = {
     ...fight,
     monster,
     overcharge: 0,
     consecutivePushes: 0,
+    faceCounts: {}, // a new push-streak starts fresh after every release, win or not
+    streakRolls: [],
     log,
   };
 
   if (monster.currentHp <= 0) {
     nextFight.outcome = 'victory';
-    nextFight.lastEvent = stampEvent('victory', { damage, abilityCredit: berserkerCredit });
-    return { fight: nextFight, result: { type: 'victory', damage } };
+    nextFight.lastEvent = stampEvent('victory', { damage, overkill, abilityCredit: berserkerCredit });
+    return { fight: nextFight, result: { type: 'victory', damage, overkill } };
   }
 
-  nextFight.lastEvent = stampEvent('release', { damage, abilityCredit: berserkerCredit });
-  return { fight: nextFight, result: { type: 'release', damage } };
+  // A non-lethal hit sometimes knocks loose a die — this is what keeps a
+  // fight that runs past one release from starving the player of dice,
+  // on top of the guaranteed drop on the eventual kill.
+  let droppedDie = null;
+  const monsterDef = getMonsterDef(fight.monster.id);
+  if (Math.random() < (monsterDef.rewards.diceChance || 0)) {
+    droppedDie = monsterDef.rewards.diceOptions[Math.floor(Math.random() * monsterDef.rewards.diceOptions.length)];
+    nextFight.bag = DiceEngine.addDie(nextFight.bag, droppedDie);
+    nextFight.log = nextFight.log.concat(`A stray blow knocks loose a ${getDieDef(droppedDie).name}!`);
+  }
+
+  nextFight.lastEvent = stampEvent('release', { damage, overkill, abilityCredit: berserkerCredit });
+  return { fight: nextFight, result: { type: 'release', damage, overkill, droppedDie } };
 }
 
 /**

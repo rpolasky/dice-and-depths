@@ -119,6 +119,15 @@ export function renderBattleOverlay(root, state, actions) {
           }).join('')}
         </div>
       ` : `
+        <div class="combo-strip" id="combo-strip">
+          ${(() => {
+            const comboValues = new Set(fight.streakRolls.filter((r) => r.multiplier > 1).map((r) => r.value));
+            return fight.streakRolls.map((r, i) => {
+              const isMatched = comboValues.has(r.value);
+              return `<span class="combo-chip ${isMatched ? 'combo-chip--matched' : ''}" data-value="${r.value}" data-idx="${i}">${r.value}</span>`;
+            }).join('');
+          })()}
+        </div>
         <div class="die-shape-badge" id="die-shape-badge" style="display:none">${nextDieShape}</div>
         <div class="die-stage" id="die-stage">
           <div class="die-visual" id="die-visual" style="background-image:url(${DIE_SHAPE_ART[nextDieShape]}); filter:${nextDieFilter}"></div>
@@ -189,6 +198,7 @@ export function renderBattleOverlay(root, state, actions) {
     lastPlayedSeq = fight.lastEvent.seq;
     playEventFx(fight.lastEvent, state.permanent.settings);
     creditAbility(fight.lastEvent.abilityCredit);
+    if (fight.lastEvent.comboInfo) playComboFx(fight.lastEvent.comboInfo, state.permanent.settings);
   }
   if (fight.partyDamageEvent && fight.partyDamageEvent.seq !== lastPartyDamageSeq) {
     lastPartyDamageSeq = fight.partyDamageEvent.seq;
@@ -434,6 +444,27 @@ function playEventFx(event, settings) {
 }
 
 /** The monster's counter-attack landing on the party — needs its own visible "ouch" moment. */
+/** The "+N COMBO!" moment: boxes/glows every matching chip and slams a
+ *  popup into the Overcharge bar. */
+function playComboFx(comboInfo, settings) {
+  const strip = document.getElementById('combo-strip');
+  if (strip) {
+    strip.classList.add('combo-strip--pop');
+    setTimeout(() => strip.classList.remove('combo-strip--pop'), 500);
+  }
+
+  const centerZone = document.getElementById('battle-center');
+  if (centerZone) {
+    const popup = document.createElement('div');
+    popup.className = 'combo-popup';
+    popup.textContent = `×${comboInfo.multiplier} COMBO! +${comboInfo.total}`;
+    centerZone.appendChild(popup);
+    setTimeout(() => popup.remove(), 950);
+  }
+
+  vibrate(comboInfo.multiplier >= 3 ? [20, 20, 20, 20, 40] : [20, 20, 30], settings);
+}
+
 function playPartyDamageFx(event, settings) {
   const hpCol = document.getElementById('hp-vbar');
   const dungeonScreen = document.querySelector('.screen--dungeon');

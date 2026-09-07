@@ -715,6 +715,13 @@ function combatRelease() {
   const { fight: advancedFight, effects } = Combat.advanceMonster(releasedFight);
   let updatedExpedition = { ...state.expedition, bag: advancedFight.bag };
   if (effects.partyDamage > 0) updatedExpedition = applyPartyDamage(updatedExpedition, effects.partyDamage);
+  if (result.droppedDie) {
+    const targetCharacterId = state.expedition.partyIds[Math.floor(Math.random() * state.expedition.partyIds.length)];
+    updatedExpedition = {
+      ...updatedExpedition,
+      unbanked: { ...updatedExpedition.unbanked, dice: updatedExpedition.unbanked.dice.concat({ dieId: result.droppedDie, targetCharacterId }) },
+    };
+  }
   store.update({ fight: advancedFight, expedition: updatedExpedition });
   checkPartyWipe();
 }
