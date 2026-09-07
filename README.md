@@ -34,6 +34,54 @@ your explicit upload.
 
 ---
 
+## Latest pass: native-portrait dungeon art
+
+- **All corridor/room art is now real, native 9:16 portrait photography**
+  (`assets/dungeon/hires/`) instead of the earlier lower-res, oddly-cropped
+  tile pack — no more `background-size: cover` guesswork, these images
+  are shot for a phone screen. Covers: straight/turn/T-junction/cross
+  corridors, dead ends, traps, hidden-dice rooms, treasure (closed),
+  story rune pedestals, boss doors, stairs down, and a dedicated eerie
+  "monster encounter" corridor (previously monster rooms just reused a
+  plain empty corridor). `tile-data.js` now returns `{ path, flip }` —
+  there's no distinct "turn right" shot, so that case reuses the
+  turn-left image mirrored via `scaleX(-1)` rather than needing a
+  duplicate/generated image.
+- **Fixed a real bug this surfaced**: the entrance room's facing was
+  hardcoded to `'north'` regardless of which way the maze actually
+  opened, so on some seeds the very first room displayed (and behaved)
+  like a dead end until the player figured out to press BACK. It now
+  faces whichever direction the entrance room's real connection is.
+- Old lower-res tiles that are fully superseded were removed from the
+  project and the service worker's precache list; the ones still used
+  for non-stone regions (web/lava/ice/fog corridors) and puzzle/shrine
+  remain.
+
+---
+
+## Latest pass: a real 3D die, and two real hero portraits
+
+- **The die roll is now a genuine 3D cube**, not a flat image faking
+  rotation. `js/ui/combat-ui.js` / `css/combat.css` build an actual
+  `transform-style: preserve-3d` cube with 6 positioned faces (CC0 art
+  from Kenney's board game pack) that swaps in during the roll and
+  swaps back to the correct-shaped static art on landing. This replaces
+  the old `rotate3d()`-on-a-flat-image trick, which is exactly what was
+  reading as "just flipping back and forth" — a flat image has no real
+  depth, so rotating it can't actually occlude/reveal faces the way a
+  real object does.
+- **Paladin and Mage now have real pixel-art portraits** instead of the
+  placeholder SVG cards — Mage uses the Wizard sprite from your existing
+  monster pack (same art style, zero style clash), Paladin uses the
+  Knight sprite from the newly-added Bitcrawl pack. Rogue, Berserker,
+  Cleric, and Scout are still the placeholder SVGs — no free pack found
+  yet that matches the existing monster art style for those classes.
+- Both new asset packs are CC0 (Kenney) and "free to use, no AI
+  training" (Bitcrawl) respectively — license files kept in
+  `assets/THIRD_PARTY_LICENSES/` for your records.
+
+---
+
 ## Latest pass: combat "juice" and character presence
 
 - **Dice now render as the correct polyhedron for their actual range** —

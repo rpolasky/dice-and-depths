@@ -47,8 +47,9 @@ export class ImageDungeonRenderer {
     this.el.corridor.dataset.resolved = String(!!scene.resolved);
     this.el.corridor.classList.toggle('corridor--boss', scene.roomKind === 'boss');
 
-    const tilePath = getTileForRoom(scene.room, scene.theme, scene.exits);
-    this.el.photo.style.backgroundImage = `url(${tilePath})`;
+    const tile = getTileForRoom(scene.room, scene.theme, scene.exits);
+    this.el.photo.style.backgroundImage = `url(${tile.path})`;
+    this.el.photo.style.transform = tile.flip ? 'scaleX(-1)' : '';
 
     this.el.occupant.innerHTML = '';
     const showsMonster = scene.roomKind === 'monster' || scene.roomKind === 'boss';

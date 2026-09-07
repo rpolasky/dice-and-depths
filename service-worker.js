@@ -6,7 +6,7 @@
 // cleared out automatically.
 // ============================================================
 
-const CACHE_NAME = 'dice-and-depths-v5';
+const CACHE_NAME = 'dice-and-depths-v7';
 
 const PRECACHE_URLS = [
   './',
@@ -58,9 +58,9 @@ const PRECACHE_URLS = [
   './assets/placeholder/icon.svg',
   './assets/placeholder/icon-192.svg',
   './assets/placeholder/icon-512.svg',
-  './assets/characters/paladin.svg',
+  './assets/characters/paladin.png',
   './assets/characters/rogue.svg',
-  './assets/characters/mage.svg',
+  './assets/characters/mage.png',
   './assets/characters/berserker.svg',
   './assets/characters/cleric.svg',
   './assets/characters/scout.svg',
@@ -72,6 +72,12 @@ const PRECACHE_URLS = [
   './assets/dice/arcane-d6.png',
   './assets/dice/void-d6.png',
   './assets/dice/lucky-d6.png',
+  './assets/dice/faces/face1.png',
+  './assets/dice/faces/face2.png',
+  './assets/dice/faces/face3.png',
+  './assets/dice/faces/face4.png',
+  './assets/dice/faces/face5.png',
+  './assets/dice/faces/face6.png',
 
   './assets/monsters/goblin.png',
   './assets/monsters/goblin_brute.png',
@@ -95,27 +101,26 @@ const PRECACHE_URLS = [
   './assets/env/gold-pile.png',
   './assets/env/stairs.png',
 
-  './assets/dungeon/01_straight_forward.png',
-  './assets/dungeon/02_turn_left.png',
-  './assets/dungeon/03_turn_right.png',
-  './assets/dungeon/04_t_junction.png',
-  './assets/dungeon/05_cross_intersection.png',
-  './assets/dungeon/09_secret_door.png',
-  './assets/dungeon/10_small_room.png',
-  './assets/dungeon/11_large_room.png',
-  './assets/dungeon/12_chest_closed.png',
   './assets/dungeon/13_chest_open.png',
-  './assets/dungeon/17_pot_urn.png',
-  './assets/dungeon/18_stairs_up.png',
-  './assets/dungeon/19_stairs_down.png',
-  './assets/dungeon/20_trap.png',
   './assets/dungeon/21_shrine.png',
   './assets/dungeon/24_fog_mist.png',
   './assets/dungeon/25_web_corridor.png',
   './assets/dungeon/26_ice_corridor.png',
   './assets/dungeon/27_lava_corridor.png',
   './assets/dungeon/36_puzzle_statues.png',
-  './assets/dungeon/37_rune_pedestal.png',
+
+  './assets/dungeon/hires/straight.jpg',
+  './assets/dungeon/hires/turn-left.jpg',
+  './assets/dungeon/hires/t-junction.jpg',
+  './assets/dungeon/hires/cross-intersection.jpg',
+  './assets/dungeon/hires/dead-end.jpg',
+  './assets/dungeon/hires/trap.jpg',
+  './assets/dungeon/hires/hidden-dice.jpg',
+  './assets/dungeon/hires/treasure-closed.jpg',
+  './assets/dungeon/hires/story-rune.jpg',
+  './assets/dungeon/hires/boss-door.jpg',
+  './assets/dungeon/hires/stairs-down.jpg',
+  './assets/dungeon/hires/monster-corridor.jpg',
 
   './assets/scenes/guild-hall.jpg',
   './assets/scenes/brighthollow-castle.jpg',

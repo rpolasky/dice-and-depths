@@ -73,7 +73,17 @@ export function renderBattlePanel(root, state, actions) {
 
     <div class="dice-roller" id="dice-roller">
       <div class="die-shape-badge" id="die-shape-badge">${nextDieShape}</div>
-      <div class="die-visual" id="die-visual" style="background-image:url(${DIE_THEME_ART[nextDieTheme] || DIE_THEME_ART.stone})"></div>
+      <div class="die-stage" id="die-stage">
+        <div class="die-visual" id="die-visual" style="background-image:url(${DIE_THEME_ART[nextDieTheme] || DIE_THEME_ART.stone})"></div>
+        <div class="die-cube" id="die-cube">
+          <div class="die-cube-face die-cube-face--front"></div>
+          <div class="die-cube-face die-cube-face--back"></div>
+          <div class="die-cube-face die-cube-face--right"></div>
+          <div class="die-cube-face die-cube-face--left"></div>
+          <div class="die-cube-face die-cube-face--top"></div>
+          <div class="die-cube-face die-cube-face--bottom"></div>
+        </div>
+      </div>
       <div class="die-result" id="die-result"></div>
     </div>
 
@@ -152,15 +162,17 @@ function handlePushClick(expedition, actions, pushBtn, releaseBtn, settings) {
   pushBtn.disabled = true;
   releaseBtn.disabled = true;
 
-  const dieVisual = document.getElementById('die-visual');
+  const dieStage = document.getElementById('die-stage');
   const dieResult = document.getElementById('die-result');
   const nextDieId = expedition.bag[0]?.dieId;
   const maxFace = nextDieId ? getMaxFaceValue(nextDieId) : 6;
 
-  if (dieVisual) dieVisual.classList.add('die-visual--rolling');
+  // Swap the flat static art for a real 3D cube (true rotateX/Y in 3D
+  // space, not a flat image faking rotation) while it "tumbles."
+  if (dieStage) dieStage.classList.add('die-stage--rolling');
   vibrate(15, settings);
 
-  // Slot-machine number cycling while the die "tumbles" — purely cosmetic,
+  // Slot-machine number cycling while the die tumbles — purely cosmetic,
   // the real result is already determined and revealed the instant the
   // roll settles, so this never lies about the outcome, just delays it.
   if (dieResult) {
@@ -178,12 +190,13 @@ function handlePushClick(expedition, actions, pushBtn, releaseBtn, settings) {
 }
 
 function renderDieResult(lastEvent) {
+  const dieStage = document.getElementById('die-stage');
   const dieVisual = document.getElementById('die-visual');
   const dieResult = document.getElementById('die-result');
   if (!dieVisual || !dieResult || !lastEvent) return;
   if (!['roll', 'crit-roll', 'heal', 'bust'].includes(lastEvent.type)) return;
 
-  dieVisual.classList.remove('die-visual--rolling');
+  if (dieStage) dieStage.classList.remove('die-stage--rolling');
   dieVisual.classList.add('die-visual--landed');
   setTimeout(() => dieVisual.classList.remove('die-visual--landed'), 300);
 

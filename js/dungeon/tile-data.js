@@ -5,90 +5,94 @@
 // file that knows actual filenames — everything else just asks
 // "what tile represents this room" and gets a path back, so a
 // future higher-resolution art drop only touches this file.
+//
+// assets/dungeon/hires/ holds a second, native-portrait (768x1376,
+// true ~9:16) art pass that supersedes the original lower-res pack
+// for the tiles it covers. The original pack's files remain for the
+// per-region single corridors (bone/ember/arcane/void) and anything
+// the hires pass didn't cover (puzzle, shrine, treasure-open).
 // ============================================================
 
 const TILE_DIR = 'assets/dungeon';
+const HIRES_DIR = 'assets/dungeon/hires';
 
 // Tiles keyed directly by room kind (these show the room's contents,
 // so they don't vary by region).
 const KIND_TILES = {
-  boss: '11_large_room.png',
-  hidden_dice: '17_pot_urn.png',
-  trap: '20_trap.png',
-  puzzle: '36_puzzle_statues.png',
-  shrine: '21_shrine.png',
-  story: '37_rune_pedestal.png',
+  boss: `${HIRES_DIR}/boss-door.jpg`,
+  hidden_dice: `${HIRES_DIR}/hidden-dice.jpg`,
+  trap: `${HIRES_DIR}/trap.jpg`,
+  puzzle: `${TILE_DIR}/36_puzzle_statues.png`,
+  shrine: `${TILE_DIR}/21_shrine.png`,
+  story: `${HIRES_DIR}/story-rune.jpg`,
+  monster: `${HIRES_DIR}/monster-corridor.jpg`,
 };
 
-const TREASURE_CLOSED = '12_chest_closed.png';
-const TREASURE_OPEN = '13_chest_open.png';
-const DEAD_END = '10_small_room.png';
-const STAIRS_DOWN = '19_stairs_down.png';
+const TREASURE_CLOSED = `${HIRES_DIR}/treasure-closed.jpg`;
+const TREASURE_OPEN = `${TILE_DIR}/13_chest_open.png`;
+const DEAD_END = `${HIRES_DIR}/dead-end.jpg`;
+const STAIRS_DOWN = `${HIRES_DIR}/stairs-down.jpg`;
 
-// Corridor tiles for "empty" and "monster" rooms (which use a plain
-// hallway backdrop, plus a monster sprite overlay for the latter).
-// The stone region has full junction-shape art and picks based on the
-// player's actual relative exits (see pickStoneCorridorTile). Other
-// regions currently have one signature corridor look each — more can
-// be dropped in later without touching any other file.
+// Corridor tiles for "empty" rooms (monster rooms have their own
+// dedicated backdrop above, plus a monster sprite overlay). The stone
+// region has real junction-shape art and picks based on the player's
+// actual relative exits (see pickStoneCorridorTile). Other regions
+// currently have one signature corridor look each — more can be
+// dropped in later without touching any other file.
 const REGION_SINGLE_CORRIDOR = {
-  bone: '25_web_corridor.png',
-  ember: '27_lava_corridor.png',
-  arcane: '26_ice_corridor.png',
-  void: '24_fog_mist.png',
+  bone: `${TILE_DIR}/25_web_corridor.png`,
+  ember: `${TILE_DIR}/27_lava_corridor.png`,
+  arcane: `${TILE_DIR}/26_ice_corridor.png`,
+  void: `${TILE_DIR}/24_fog_mist.png`,
 };
 
-const STONE_STRAIGHT = '01_straight_forward.png';
-const STONE_TURN_LEFT = '02_turn_left.png';
-const STONE_TURN_RIGHT = '03_turn_right.png';
-const STONE_T_JUNCTION = '04_t_junction.png';
-const STONE_CROSS = '05_cross_intersection.png';
+const STONE_STRAIGHT = `${HIRES_DIR}/straight.jpg`;
+const STONE_TURN_LEFT = `${HIRES_DIR}/turn-left.jpg`;
+const STONE_T_JUNCTION = `${HIRES_DIR}/t-junction.jpg`;
+const STONE_CROSS = `${HIRES_DIR}/cross-intersection.jpg`;
+// No distinct "turn right" shot exists yet — the turn-left art is
+// mirrored horizontally instead of duplicating/AI-generating a new
+// image. getTileForRoom() returns { path, flip } so the renderer can
+// apply this; every other case returns flip: false.
 
 /**
  * Picks stone-region corridor art from the player's actual relative
  * exits (forward/left/right — "back" is always open since that's where
  * they came from, so it doesn't affect which tile reads correctly).
+ * Returns { path, flip }.
  */
 function pickStoneCorridorTile(exits) {
   const { forward, left, right } = exits;
-  if (forward && left && right) return STONE_CROSS;
-  if (forward && (left || right)) return STONE_T_JUNCTION;
-  if (!forward && left && right) return STONE_T_JUNCTION;
-  if (forward) return STONE_STRAIGHT;
-  if (left) return STONE_TURN_LEFT;
-  if (right) return STONE_TURN_RIGHT;
-  return DEAD_END; // only the way back is open
+  if (forward && left && right) return { path: STONE_CROSS, flip: false };
+  if (forward && (left || right)) return { path: STONE_T_JUNCTION, flip: false };
+  if (!forward && left && right) return { path: STONE_T_JUNCTION, flip: false };
+  if (forward) return { path: STONE_STRAIGHT, flip: false };
+  if (left) return { path: STONE_TURN_LEFT, flip: false };
+  if (right) return { path: STONE_TURN_LEFT, flip: true }; // mirrored stand-in for turn-right
+  return { path: DEAD_END, flip: false }; // only the way back is open
 }
 
 function pickCorridorTile(theme, exits) {
   if (theme === 'stone' || !REGION_SINGLE_CORRIDOR[theme]) return pickStoneCorridorTile(exits);
-  return REGION_SINGLE_CORRIDOR[theme];
+  return { path: REGION_SINGLE_CORRIDOR[theme], flip: false };
 }
 
 /**
- * Returns the asset path (not just filename) for a given room + region
- * theme. `exits` (relative forward/left/right/back booleans — see
- * js/dungeon/movement.js relativeExits()) is required for 'empty' and
- * 'monster' rooms so the corridor art matches the actual junction shape;
- * it's ignored for rooms with their own dedicated art (treasure, trap...).
+ * Returns { path, flip } for a given room + region theme. `exits`
+ * (relative forward/left/right/back booleans — see
+ * js/dungeon/movement.js relativeExits()) is required for 'empty' rooms
+ * so the corridor art matches the actual junction shape; it's ignored
+ * for rooms with their own dedicated art (treasure, trap, monster...).
  */
 export function getTileForRoom(room, theme, exits = { forward: true, left: false, right: false, back: true }) {
-  let filename;
   if (room.kind === 'treasure') {
-    filename = room.resolved ? TREASURE_OPEN : TREASURE_CLOSED;
-  } else if (KIND_TILES[room.kind]) {
-    filename = KIND_TILES[room.kind];
-  } else if (room.isExit) {
-    filename = STAIRS_DOWN; // clear visual signal this room leads to the next floor
-  } else {
-    filename = pickCorridorTile(theme, exits);
+    return { path: room.resolved ? TREASURE_OPEN : TREASURE_CLOSED, flip: false };
   }
-  return `${TILE_DIR}/${filename}`;
-}
-
-export function stairsDownTile() {
-  return `${TILE_DIR}/19_stairs_down.png`;
-}
-export function stairsUpTile() {
-  return `${TILE_DIR}/18_stairs_up.png`;
+  if (KIND_TILES[room.kind]) {
+    return { path: KIND_TILES[room.kind], flip: false };
+  }
+  if (room.isExit) {
+    return { path: STAIRS_DOWN, flip: false }; // clear visual signal this room leads to the next floor
+  }
+  return pickCorridorTile(theme, exits);
 }

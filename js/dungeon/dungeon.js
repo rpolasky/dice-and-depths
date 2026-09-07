@@ -11,9 +11,14 @@ export { DIRECTIONS };
 
 export function enterFloor(floorNumber) {
   const floor = generateFloor(floorNumber);
+  const entranceRoom = getRoom(floor, floor.entrance.x, floor.entrance.y);
+  // Face whichever direction the entrance actually opens onto, rather
+  // than a hardcoded 'north' — otherwise the very first room can render
+  // (and behave) like a dead end until the player figures out to turn.
+  const initialDirection = DIRECTIONS.find((dir) => entranceRoom.connections[dir]) || 'north';
   return {
     floor,
-    position: { x: floor.entrance.x, y: floor.entrance.y, direction: 'north' },
+    position: { x: floor.entrance.x, y: floor.entrance.y, direction: initialDirection },
   };
 }
 
