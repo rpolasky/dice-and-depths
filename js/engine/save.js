@@ -5,9 +5,10 @@
 // ============================================================
 
 import { store, freshState } from './state.js';
+import { allCharacterIds } from '../data/character-data.js';
 
 const SAVE_KEY = 'dicecrawl_save_v1';
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 4;
 
 const migrations = {
   // v1 saves predate the tavern hub (activeParty/monsterCodex/stats) and
@@ -33,6 +34,18 @@ const migrations = {
     saveVersion: 3,
     expedition: null,
     dungeon: null,
+  }),
+  // v3 saves predate character leveling — every character starts at
+  // level 1 / 0 XP / no bonus dice, same as a brand new save.
+  3: (data) => ({
+    ...data,
+    saveVersion: 4,
+    permanent: {
+      ...data.permanent,
+      characterProgress: Object.fromEntries(
+        allCharacterIds().map((id) => [id, { level: 1, xp: 0, bonusDice: [] }])
+      ),
+    },
   }),
 };
 

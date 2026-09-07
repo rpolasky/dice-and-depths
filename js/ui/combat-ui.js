@@ -1,10 +1,19 @@
 // ============================================================
-// COMBAT-UI.JS — renders the push-your-luck battle panel INLINE
-// on the dungeon screen (see dungeon-ui.js). The monster's
-// animated sprite lives in the corridor scene above this panel
-// (mounted by the active dungeon renderer) — this file owns the
-// HUD/controls below it, and anchors FX bursts to that shared
-// sprite via #corridor-occupant.
+// COMBAT-UI.JS — renders the battle as a full-viewport overlay on
+// top of the dungeon scene (see dungeon-ui.js), not a boxed panel:
+//   - monster name/HP/intent pinned along the top
+//   - a vertical party-HP bar pinned to the left edge
+//   - a vertical, flame-animated Overcharge bar pinned to the right,
+//     filling upward, with the current threshold labeled beside it
+//   - the party fanned out like a hand of cards along the bottom
+//   - tapping a card "deals" a die into the center; tapping the die
+//     rolls it (a real 3D cube) and reveals the result
+//   - a circular RELEASE button and a small FLEE link under the fan
+//
+// The monster's animated sprite itself lives in the corridor scene
+// (mounted by the active dungeon renderer) so it can be huge without
+// this overlay needing to manage it — this file anchors FX bursts to
+// it via #corridor-occupant.
 // ============================================================
 
 import { getIntentInfo, bagPeek } from '../combat/combat.js';
@@ -21,13 +30,16 @@ const THRESHOLD_CELEBRATION = {
 };
 
 let lastPlayedSeq = -1;
-let rollLock = false;
 let lastThresholdRank = null;
 let lastOvercharge = null;
 let rollCycleInterval = null;
+// Local UI-only state machine for the tap-card -> tap-die flow. Not part
+// of game state on purpose: it's pure presentation, reset whenever combat
+// re-renders after a real action resolves.
+let pushPhase = 'idle'; // 'idle' | 'die-ready' | 'rolling'
+let activeCardIndex = null;
 
-/** Renders the battle HUD/controls into `root`. Call after the corridor scene is mounted. */
-export function renderBattlePanel(root, state, actions) {
+export function renderBattleOverlay(root, state, actions) {
   const { fight, expedition } = state;
   const monster = fight.monster;
   const intent = getIntentInfo(fight);
@@ -35,89 +47,125 @@ export function renderBattlePanel(root, state, actions) {
   const potentialDamage = computeReleaseDamage(fight.overcharge);
   const hpPct = Math.max(0, Math.round((monster.currentHp / monster.hp) * 100));
   const ocPct = Math.min(100, Math.round((fight.overcharge / bustCeiling()) * 100));
-  const revealed = bagPeek(fight, 1);
+  const partyHpPct = Math.max(0, Math.round((expedition.partyHp / expedition.partyMaxHp) * 100));
+  const revealed = bagPeek(fight);
   const nextDieId = expedition.bag[0]?.dieId;
   const nextDieTheme = nextDieId ? getDieDef(nextDieId).theme : 'stone';
   const nextDieShape = nextDieId ? shapeForMaxFace(getMaxFaceValue(nextDieId)) : 'd6';
   const readyToRelease = threshold.id === 'hot' || threshold.id === 'critical';
+  const bagEmpty = expedition.bag.length === 0;
 
   root.dataset.danger = threshold.id;
+  const pendingChoice = fight.pendingChoice;
   root.innerHTML = `
-    <div class="monster-panel">
-      <div class="monster-name-row">
-        <span class="monster-name">${monster.name}</span>
-        <span class="monster-hp-text">${monster.currentHp}/${monster.hp}</span>
+    <div class="battle-top-bar">
+      <div class="battle-monster-name-row">
+        <span class="battle-monster-name">${monster.name}</span>
+        <span class="battle-monster-hp-text">${monster.currentHp}/${monster.hp}</span>
       </div>
-      <div class="bar bar--hp"><div class="bar-fill" style="width:${hpPct}%"></div></div>
+      <div class="bar bar--hp battle-monster-hp-bar"><div class="bar-fill" style="width:${hpPct}%"></div></div>
       <div class="intent-row ${intent.danger ? 'intent-row--danger' : ''}">
         <span class="intent-label">INTENT</span>
         <span class="intent-text">${intent.text}</span>
         <span class="intent-detail">${intent.detail}</span>
       </div>
+      ${revealed.length ? `<div class="reveal-next">🔮 next ${revealed.length > 1 ? 'dice' : 'die'}: <strong>${revealed.map((d) => d.name).join(', ')}</strong></div>` : ''}
     </div>
 
-    <div class="overcharge-panel" id="overcharge-panel">
-      <div class="overcharge-label">OVERCHARGE</div>
-      <div class="bar bar--overcharge" id="overcharge-bar">
-        <div class="bar-fill" id="overcharge-fill" style="width:${ocPct}%"></div>
-        <div class="bar-tick" style="left:${(15 / bustCeiling()) * 100}%"></div>
-        <div class="bar-tick" style="left:${(25 / bustCeiling()) * 100}%"></div>
+    <div class="battle-vertical-bar battle-vertical-bar--hp" aria-label="Party HP">
+      <div class="battle-vbar-track">
+        <div class="battle-vbar-fill battle-vbar-fill--hp" style="height:${partyHpPct}%"></div>
       </div>
-      <div class="overcharge-numbers">
-        <span class="overcharge-value">${fight.overcharge} <small>/ ${bustCeiling()}</small></span>
-        <span class="threshold-tag threshold-tag--${threshold.id}">${threshold.label}</span>
-      </div>
-      <div class="potential-damage">Potential Release: <strong>${potentialDamage}</strong> dmg</div>
-      ${revealed.length ? `<div class="reveal-next">🔮 <strong>Mage's Arcane Sight</strong> — next die: <strong>${revealed[0].name}</strong></div>` : ''}
+      <span class="battle-vbar-label">${expedition.partyHp}<small>/${expedition.partyMaxHp}</small></span>
     </div>
 
-    <div class="dice-roller" id="dice-roller">
-      <div class="die-shape-badge" id="die-shape-badge">${nextDieShape}</div>
-      <div class="die-stage" id="die-stage">
-        <div class="die-visual" id="die-visual" style="background-image:url(${DIE_THEME_ART[nextDieTheme] || DIE_THEME_ART.stone})"></div>
-        <div class="die-cube" id="die-cube">
-          <div class="die-cube-face die-cube-face--front"></div>
-          <div class="die-cube-face die-cube-face--back"></div>
-          <div class="die-cube-face die-cube-face--right"></div>
-          <div class="die-cube-face die-cube-face--left"></div>
-          <div class="die-cube-face die-cube-face--top"></div>
-          <div class="die-cube-face die-cube-face--bottom"></div>
+    <div class="battle-vertical-bar battle-vertical-bar--oc" id="oc-vbar" aria-label="Overcharge">
+      <span class="battle-vbar-tag threshold-tag--${threshold.id}">${threshold.label}</span>
+      <div class="battle-vbar-track battle-vbar-track--oc">
+        <div class="battle-vbar-fill battle-vbar-fill--oc" id="oc-vbar-fill" style="height:${ocPct}%">
+          <div class="battle-vbar-flame"></div>
         </div>
+        <div class="battle-vbar-tick" style="bottom:${(15 / bustCeiling()) * 100}%"></div>
+        <div class="battle-vbar-tick" style="bottom:${(25 / bustCeiling()) * 100}%"></div>
       </div>
-      <div class="die-result" id="die-result"></div>
+      <span class="battle-vbar-label">${fight.overcharge}<small>/${bustCeiling()}</small></span>
+      <span class="battle-vbar-sub">+${potentialDamage} dmg</span>
     </div>
 
-    <div class="combat-log" id="combat-log">
-      ${fight.log.slice(-3).map((l) => `<div class="log-line">${l}</div>`).join('')}
+    <div class="battle-center-zone" id="battle-center">
+      ${pendingChoice ? `
+        <div class="choice-prompt">Choose a die to roll</div>
+        <div class="choice-die-row">
+          ${pendingChoice.candidates.map((c) => {
+            const def = getDieDef(c.dieId);
+            return `<button class="choice-die" data-instance="${c.instanceId}" style="background-image:url(${DIE_THEME_ART[def.theme] || DIE_THEME_ART.stone})">
+              <span class="choice-die-name">${def.name}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      ` : `
+        <div class="die-shape-badge" id="die-shape-badge" style="display:none">${nextDieShape}</div>
+        <div class="die-stage" id="die-stage">
+          <div class="die-visual" id="die-visual" style="background-image:url(${DIE_THEME_ART[nextDieTheme] || DIE_THEME_ART.stone})"></div>
+          <div class="die-cube" id="die-cube">
+            <div class="die-cube-face die-cube-face--front"></div>
+            <div class="die-cube-face die-cube-face--back"></div>
+            <div class="die-cube-face die-cube-face--right"></div>
+            <div class="die-cube-face die-cube-face--left"></div>
+            <div class="die-cube-face die-cube-face--top"></div>
+            <div class="die-cube-face die-cube-face--bottom"></div>
+          </div>
+        </div>
+        <div class="die-result" id="die-result"></div>
+      `}
     </div>
 
-    <div class="combat-actions">
-      <button class="btn btn--release ${readyToRelease ? 'btn--ready' : ''}" data-action="release">
-        ⚡ RELEASE${readyToRelease ? ' NOW' : ''}
-      </button>
-      <button class="btn btn--push" data-action="push" ${expedition.bag.length === 0 ? 'disabled' : ''}>
-        🎲 PUSH <span class="btn-sub">${expedition.bag.length} left</span>
-      </button>
+    <div class="battle-bottom">
+      <div class="card-fan" id="card-fan">
+        ${expedition.partyIds.map((id, i) => {
+          const c = getCharacterDef(id);
+          return `<button class="party-card" data-idx="${i}" data-char="${id}" style="background-image:url(${c.portrait}); --fan-i:${i}; --fan-n:${expedition.partyIds.length}" ${bagEmpty || pushPhase !== 'idle' || pendingChoice ? 'disabled' : ''}></button>`;
+        }).join('')}
+      </div>
+      <div class="battle-bottom-actions">
+        <button class="release-fab ${readyToRelease ? 'release-fab--ready' : ''}" data-action="release" ${pendingChoice ? 'disabled' : ''} aria-label="Release">
+          <span>RELEASE</span>
+        </button>
+      </div>
+      <button class="btn btn--text btn--flee" data-action="flee" ${pendingChoice ? 'disabled' : ''}>🏃 Flee${bagEmpty ? ' — out of dice!' : ''}</button>
     </div>
-    <button class="btn btn--text btn--flee" data-action="flee">🏃 Flee the fight${expedition.bag.length === 0 ? ' — out of dice!' : ''}</button>
   `;
 
-  const pushBtn = root.querySelector('[data-action="push"]');
+  if (pendingChoice) {
+    root.querySelectorAll('.choice-die').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        vibrate(15, state.permanent.settings);
+        actions.combatResolveChoice(btn.dataset.instance);
+      });
+    });
+  }
+
   const releaseBtn = root.querySelector('[data-action="release"]');
   const fleeBtn = root.querySelector('[data-action="flee"]');
-  pushBtn.addEventListener('click', () => handlePushClick(expedition, actions, pushBtn, releaseBtn, state.permanent.settings));
   releaseBtn.addEventListener('click', () => {
     vibrate(40, state.permanent.settings);
     actions.combatRelease();
   });
   fleeBtn.addEventListener('click', actions.combatFlee);
 
-  // Overcharge bar "comes alive": pulse on every increase, big banner on
-  // crossing into a new damage tier.
+  root.querySelectorAll('.party-card').forEach((btn) => {
+    btn.addEventListener('click', () => handleCardTap(Number(btn.dataset.idx), expedition, actions, state.permanent.settings));
+  });
+
+  if (pushPhase === 'idle') {
+    const dieZone = document.getElementById('battle-center');
+    if (dieZone) dieZone.classList.remove('battle-center-zone--active');
+  }
+
   const rank = THRESHOLD_RANK[threshold.id];
   if (lastOvercharge !== null && fight.overcharge > lastOvercharge) {
-    const fillEl = document.getElementById('overcharge-fill');
-    if (fillEl) { fillEl.classList.add('bar-fill--pulse'); setTimeout(() => fillEl.classList.remove('bar-fill--pulse'), 500); }
+    const fillEl = document.getElementById('oc-vbar-fill');
+    if (fillEl) { fillEl.classList.add('battle-vbar-fill--pulse'); setTimeout(() => fillEl.classList.remove('battle-vbar-fill--pulse'), 500); }
   }
   if (lastThresholdRank !== null && rank > lastThresholdRank && THRESHOLD_CELEBRATION[threshold.id]) {
     celebrateThreshold(THRESHOLD_CELEBRATION[threshold.id], state.permanent.settings);
@@ -136,45 +184,73 @@ export function renderBattlePanel(root, state, actions) {
 /** Reset per-fight tracking — call when leaving combat so the next fight starts clean. */
 export function resetBattleFxState() {
   lastPlayedSeq = -1;
-  rollLock = false;
   lastThresholdRank = null;
   lastOvercharge = null;
+  pushPhase = 'idle';
+  activeCardIndex = null;
   if (rollCycleInterval) { clearInterval(rollCycleInterval); rollCycleInterval = null; }
 }
 
 function celebrateThreshold(info, settings) {
-  const panel = document.getElementById('overcharge-panel');
-  if (!panel) return;
-  panel.classList.add('overcharge-panel--flash');
-  setTimeout(() => panel.classList.remove('overcharge-panel--flash'), 700);
+  const bar = document.getElementById('oc-vbar');
+  if (!bar) return;
+  bar.classList.add('battle-vbar--flash');
+  setTimeout(() => bar.classList.remove('battle-vbar--flash'), 700);
 
-  const banner = document.createElement('div');
-  banner.className = `threshold-banner ${info.cls}`;
-  banner.textContent = info.text;
-  panel.appendChild(banner);
-  setTimeout(() => banner.remove(), 900);
+  const host = document.getElementById('battle-center');
+  if (host) {
+    const banner = document.createElement('div');
+    banner.className = `threshold-banner ${info.cls}`;
+    banner.textContent = info.text;
+    host.appendChild(banner);
+    setTimeout(() => banner.remove(), 900);
+  }
   vibrate([20, 30, 60], settings);
 }
 
-function handlePushClick(expedition, actions, pushBtn, releaseBtn, settings) {
-  if (rollLock || expedition.bag.length === 0) return;
-  rollLock = true;
-  pushBtn.disabled = true;
-  releaseBtn.disabled = true;
+// ---------------------------------------------------------------
+// Tap-card -> tap-die push flow
+// ---------------------------------------------------------------
+
+function handleCardTap(idx, expedition, actions, settings) {
+  if (pushPhase !== 'idle' || expedition.bag.length === 0) return;
+  pushPhase = 'die-ready';
+  activeCardIndex = idx;
+
+  const fan = document.getElementById('card-fan');
+  const card = fan?.querySelector(`[data-idx="${idx}"]`);
+  if (card) card.classList.add('party-card--active');
+  if (fan) fan.querySelectorAll('.party-card').forEach((el) => { el.disabled = true; });
+
+  const centerZone = document.getElementById('battle-center');
+  const dieStage = document.getElementById('die-stage');
+  const shapeBadge = document.getElementById('die-shape-badge');
+  if (centerZone) centerZone.classList.add('battle-center-zone--active');
+  if (dieStage) dieStage.classList.add('die-stage--pulsing');
+  if (shapeBadge) shapeBadge.style.display = '';
+
+  vibrate(10, settings);
+
+  const dieVisual = document.getElementById('die-visual');
+  if (dieVisual) {
+    dieVisual.onclick = () => handleDieTap(expedition, actions, settings);
+  }
+}
+
+function handleDieTap(expedition, actions, settings) {
+  if (pushPhase !== 'die-ready') return;
+  pushPhase = 'rolling';
 
   const dieStage = document.getElementById('die-stage');
+  const dieVisual = document.getElementById('die-visual');
   const dieResult = document.getElementById('die-result');
   const nextDieId = expedition.bag[0]?.dieId;
   const maxFace = nextDieId ? getMaxFaceValue(nextDieId) : 6;
 
-  // Swap the flat static art for a real 3D cube (true rotateX/Y in 3D
-  // space, not a flat image faking rotation) while it "tumbles."
-  if (dieStage) dieStage.classList.add('die-stage--rolling');
+  if (dieStage) { dieStage.classList.remove('die-stage--pulsing'); dieStage.classList.add('die-stage--rolling'); }
+  if (dieVisual) dieVisual.onclick = null;
   vibrate(15, settings);
 
-  // Slot-machine number cycling while the die tumbles — purely cosmetic,
-  // the real result is already determined and revealed the instant the
-  // roll settles, so this never lies about the outcome, just delays it.
   if (dieResult) {
     dieResult.className = 'die-result die-result--cycling';
     rollCycleInterval = setInterval(() => {
@@ -184,21 +260,21 @@ function handlePushClick(expedition, actions, pushBtn, releaseBtn, settings) {
 
   setTimeout(() => {
     if (rollCycleInterval) { clearInterval(rollCycleInterval); rollCycleInterval = null; }
-    rollLock = false;
+    pushPhase = 'idle';
+    activeCardIndex = null;
     actions.combatPush();
   }, 550);
 }
 
 function renderDieResult(lastEvent) {
   const dieStage = document.getElementById('die-stage');
-  const dieVisual = document.getElementById('die-visual');
   const dieResult = document.getElementById('die-result');
-  if (!dieVisual || !dieResult || !lastEvent) return;
+  if (!dieStage || !dieResult || !lastEvent) return;
   if (!['roll', 'crit-roll', 'heal', 'bust'].includes(lastEvent.type)) return;
 
-  if (dieStage) dieStage.classList.remove('die-stage--rolling');
-  dieVisual.classList.add('die-visual--landed');
-  setTimeout(() => dieVisual.classList.remove('die-visual--landed'), 300);
+  dieStage.classList.remove('die-stage--rolling');
+  dieStage.classList.add('die-visual--landed');
+  setTimeout(() => dieStage.classList.remove('die-visual--landed'), 320);
 
   const face = lastEvent.face;
   let label = '';
@@ -210,16 +286,21 @@ function renderDieResult(lastEvent) {
   else if (face) { label = `${face.value}`; }
 
   dieResult.textContent = label;
-  dieResult.className = `die-result ${cls}`;
+  dieResult.className = `die-result die-result--reveal ${cls}`;
+
+  setTimeout(() => {
+    const centerZone = document.getElementById('battle-center');
+    if (centerZone) centerZone.classList.remove('battle-center-zone--active');
+  }, 900);
 }
 
-/** Briefly glows the party chip of whichever character's ability just fired, and drops a small toast naming them. */
+/** Briefly glows the party card of whichever character's ability just fired, and drops a small toast naming them. */
 function creditAbility(credit) {
   if (!credit) return;
-  const chip = document.querySelector(`.party-chip[data-char="${credit.characterId}"]`);
-  if (chip) {
-    chip.classList.add('party-chip--ability-glow');
-    setTimeout(() => chip.classList.remove('party-chip--ability-glow'), 1100);
+  const card = document.querySelector(`.party-card[data-char="${credit.characterId}"]`);
+  if (card) {
+    card.classList.add('party-card--ability-glow');
+    setTimeout(() => card.classList.remove('party-card--ability-glow'), 1100);
   }
 
   const c = getCharacterDef(credit.characterId);
@@ -241,13 +322,13 @@ function creditAbility(credit) {
 
 function playEventFx(event, settings) {
   const occupant = document.getElementById('corridor-occupant');
-  const roller = document.getElementById('dice-roller');
+  const centerZone = document.getElementById('battle-center');
   const dungeonScreen = document.querySelector('.screen--dungeon');
 
   switch (event.type) {
     case 'release':
     case 'victory':
-      if (occupant) playSpriteOnce(occupant, FX_SPRITES.releaseHit, { scale: 2.2 });
+      if (occupant) playSpriteOnce(occupant, FX_SPRITES.releaseHit, { scale: 3.2 });
       vibrate(60, settings);
       break;
     case 'bust':
@@ -255,15 +336,15 @@ function playEventFx(event, settings) {
         dungeonScreen.classList.add('screen--shake');
         setTimeout(() => dungeonScreen.classList.remove('screen--shake'), 420);
       }
-      if (roller) playSpriteOnce(roller, FX_SPRITES.bustShock, { scale: 2.0, className: 'fx-burst--danger' });
+      if (centerZone) playSpriteOnce(centerZone, FX_SPRITES.bustShock, { scale: 2.4, className: 'fx-burst--danger' });
       vibrate([40, 40, 60], settings);
       break;
     case 'crit-roll':
-      if (roller) playSpriteOnce(roller, FX_SPRITES.critBurst, { scale: 3.2 });
+      if (centerZone) playSpriteOnce(centerZone, FX_SPRITES.critBurst, { scale: 3.6 });
       vibrate(30, settings);
       break;
     case 'heal':
-      if (roller) playSpriteOnce(roller, FX_SPRITES.healSparkle, { scale: 3.2 });
+      if (centerZone) playSpriteOnce(centerZone, FX_SPRITES.healSparkle, { scale: 3.6 });
       break;
     default:
       break;

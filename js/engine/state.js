@@ -5,10 +5,19 @@
 // ============================================================
 
 import { BALANCE } from '../data/balance.js';
+import { allCharacterIds } from '../data/character-data.js';
+
+function freshCharacterProgress() {
+  const progress = {};
+  for (const id of allCharacterIds()) {
+    progress[id] = { level: 1, xp: 0, bonusDice: [] };
+  }
+  return progress;
+}
 
 function freshState() {
   return {
-    saveVersion: 3,
+    saveVersion: 4,
 
     // PERMANENT PROGRESSION (persists across expeditions/death)
     permanent: {
@@ -21,6 +30,11 @@ function freshState() {
       storyFlags: [],
       activeParty: [], // character ids chosen at the tavern, carried into the next expedition
       monsterCodex: [], // monster ids the player has actually encountered
+      // Per-character level/XP/loot-earned bonus dice — persists across
+      // expeditions regardless of who's in the active party, so leveling
+      // up (or finding loot for) a bench character is meaningful even
+      // before you bring them along. See progression.js.
+      characterProgress: freshCharacterProgress(),
       stats: { bestAttackDamage: 0, monstersDefeated: 0, expeditionsRun: 0 },
       settings: { sound: true, haptics: true, reducedMotion: false },
     },

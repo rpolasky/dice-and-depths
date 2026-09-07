@@ -57,7 +57,12 @@ export class ImageDungeonRenderer {
       const sprite = getMonsterSprite(scene.monsterId);
       if (sprite) {
         const spriteEl = document.createElement('div');
-        const scale = scene.roomKind === 'boss' ? 2.6 : 3.2;
+        // Scaled so every monster reads as roughly the same on-screen size
+        // regardless of native sprite resolution (dragon's sheet is much
+        // higher-res than a goblin's) — bumped ~3x from the original pass
+        // per direct feedback that monsters were reading as too small to
+        // actually see the fight.
+        const scale = scene.roomKind === 'boss' ? 3.6 : 9;
         spriteEl.style.width = `${sprite.frameW * scale}px`;
         spriteEl.style.height = `${sprite.frameH * scale}px`;
         spriteEl.className = 'corridor-monster-sprite';

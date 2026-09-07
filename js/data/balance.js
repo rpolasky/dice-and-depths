@@ -49,4 +49,14 @@ export const BALANCE = {
     // floors (from the start of a region) that guarantee an extraction point
     guaranteedEveryNFloors: 3,
   },
+
+  leveling: {
+    maxLevel: 5,
+    // Cumulative XP required to REACH each level (index 0 = level 1, always 0).
+    xpThresholds: [0, 30, 70, 120, 180],
+    // XP awarded to every active party member when a monster is defeated,
+    // scaled by the monster's tier (see monster-data.js).
+    xpByMonsterTier: { 1: 10, 2: 20, 3: 35 },
+    xpBossBonus: 25, // extra XP on top of tier XP for boss kills
+  },
 };

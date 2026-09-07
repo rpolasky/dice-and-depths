@@ -13,7 +13,7 @@ import * as Movement from './dungeon/movement.js';
 import * as Encounters from './dungeon/encounters.js';
 import * as Progression from './progression/progression.js';
 import { getMonsterDef, MONSTER_DATA } from './data/monster-data.js';
-import { getCharacterDef } from './data/character-data.js';
+import { getCharacterDef, nextUnlock } from './data/character-data.js';
 import { getDieDef } from './data/dice-data.js';
 import { getPuzzle } from './data/content-data.js';
 import { DIE_THEME_ART } from './data/sprite-data.js';
@@ -127,10 +127,7 @@ function startExpeditionFromTavern() {
     return;
   }
   const expedition = Progression.createExpedition(permanent.activeParty, 1);
-  const startingDice = [
-    'basic_die', 'basic_die', 'basic_die', 'basic_die', 'basic_die', 'basic_die',
-    'power_die', 'power_die', 'healing_die', 'critical_die', 'lucky_die',
-  ];
+  const startingDice = Progression.assembleStartingBag(permanent.activeParty, permanent.characterProgress);
   expedition.bag = DiceEngine.createBag(startingDice);
   const dungeon = Dungeon.enterFloor(1);
   currentRoomVisited(dungeon);
@@ -152,12 +149,25 @@ function currentRoomVisited(dungeon) {
 
 function showCharacterInfo(characterId) {
   const c = getCharacterDef(characterId);
+  const { permanent } = store.get();
+  const prog = permanent.characterProgress[characterId] || { level: 1, xp: 0, bonusDice: [] };
+  const xpNext = Progression.xpForNextLevel(prog.level);
+  const xpLine = xpNext !== null
+    ? `${prog.xp} / ${xpNext} XP to level ${prog.level + 1}`
+    : 'Max level reached';
+  const upcoming = nextUnlock(characterId, prog.level);
   showModal({
     title: c.name, icon: c.icon,
     bodyHtml: `
       <div class="character-modal-portrait" style="background-image:url(${c.portrait})"></div>
       <p class="subtle" style="text-align:center;margin-top:8px;">${c.className} · "${c.tagline}"</p>
-      <p>${c.description}</p>`,
+      <div class="char-level-row">
+        <span class="char-level-badge">Lv.${prog.level}</span>
+        <span class="subtle">${xpLine}</span>
+      </div>
+      <p>${c.description}</p>
+      ${upcoming ? `<p class="subtle">Next unlock at level ${upcoming.level}${upcoming.unlockName ? `: <strong>${upcoming.unlockName}</strong>` : ''}</p>` : ''}
+      ${prog.bonusDice.length ? `<p class="subtle">Loot-earned dice: ${prog.bonusDice.length}</p>` : ''}`,
     buttons: [{ label: 'Close', onClick: closeModal, variant: 'secondary' }],
   });
 }
@@ -304,9 +314,56 @@ function openTreasureModal() {
   });
   document.querySelectorAll('.die-choice').forEach((el, i) => {
     el.addEventListener('click', () => {
-      const { expedition } = store.get();
-      const newBag = DiceEngine.addDie(expedition.bag, choices[i].id);
-      store.update({ expedition: { ...expedition, bag: newBag } });
+      closeModal();
+      openLootRecipientModal(choices[i]);
+    });
+  });
+}
+
+/**
+ * Second step of a treasure pickup: which character does this die join?
+ * Picking a bench character (not in the active party) gives up using
+ * the die THIS run in exchange for permanently growing that character's
+ * loadout once the expedition is successfully extracted.
+ */
+function openLootRecipientModal(dieDef) {
+  const { expedition, permanent } = store.get();
+  const rows = permanent.unlockedCharacters.map((charId) => {
+    const c = getCharacterDef(charId);
+    const inParty = expedition.partyIds.includes(charId);
+    const prog = permanent.characterProgress[charId] || { level: 1 };
+    return `<button class="loot-recipient" data-char="${charId}">
+      <div class="loot-recipient-portrait" style="background-image:url(${c.portrait})"></div>
+      <div class="loot-recipient-info">
+        <div class="loot-recipient-name">${c.name} <span class="loot-recipient-level">Lv.${prog.level}</span></div>
+        <div class="loot-recipient-tag">${inParty ? 'In this expedition — usable now' : 'Not with you — saved for next time'}</div>
+      </div>
+    </button>`;
+  }).join('');
+
+  showModal({
+    title: `Give the ${dieDef.name} to...`, icon: '🎁',
+    bodyHtml: `<div class="loot-recipient-list">${rows}</div>`,
+    buttons: [],
+    dismissible: false,
+  });
+
+  document.querySelectorAll('.loot-recipient').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const charId = btn.dataset.char;
+      const state = store.get();
+      const inParty = state.expedition.partyIds.includes(charId);
+      let updatedExpedition = {
+        ...state.expedition,
+        unbanked: {
+          ...state.expedition.unbanked,
+          dice: state.expedition.unbanked.dice.concat({ dieId: dieDef.id, targetCharacterId: charId }),
+        },
+      };
+      if (inParty) {
+        updatedExpedition.bag = DiceEngine.addDie(state.expedition.bag, dieDef.id);
+      }
+      store.update({ expedition: updatedExpedition });
       closeModal();
       resolveCurrentRoom();
     });
@@ -322,7 +379,12 @@ function openSearchModal() {
   if (result.outcome === 'found') {
     const def = getDieDef(result.dieId);
     const newBag = DiceEngine.addDie(expedition.bag, result.dieId, result.count);
-    store.update({ expedition: { ...expedition, bag: newBag } });
+    const target = expedition.partyIds[Math.floor(Math.random() * expedition.partyIds.length)];
+    const newUnbanked = {
+      ...expedition.unbanked,
+      dice: expedition.unbanked.dice.concat(Array(result.count).fill({ dieId: result.dieId, targetCharacterId: target })),
+    };
+    store.update({ expedition: { ...expedition, bag: newBag, unbanked: newUnbanked } });
     bodyHtml = `<p>You found <strong>${result.count}× ${def.name}</strong>!</p>`;
   } else if (result.outcome === 'trap') {
     const updated = applyPartyDamage(expedition, result.damage);
@@ -400,8 +462,14 @@ function resolvePuzzle(puzzle, success) {
   let updated = expedition;
   if (success) {
     let bag = expedition.bag;
-    if (puzzle.reward.dice) bag = DiceEngine.addDie(bag, puzzle.reward.dieType || 'basic_die', puzzle.reward.dice);
-    updated = { ...expedition, bag };
+    let unbanked = expedition.unbanked;
+    if (puzzle.reward.dice) {
+      const dieId = puzzle.reward.dieType || 'basic_die';
+      bag = DiceEngine.addDie(bag, dieId, puzzle.reward.dice);
+      const target = expedition.partyIds[Math.floor(Math.random() * expedition.partyIds.length)];
+      unbanked = { ...unbanked, dice: unbanked.dice.concat(Array(puzzle.reward.dice).fill({ dieId, targetCharacterId: target })) };
+    }
+    updated = { ...expedition, bag, unbanked };
     bodyHtml = `<p>Success! ${puzzle.reward.dice ? `You gain ${puzzle.reward.dice} dice.` : 'The mechanism yields its reward.'}</p>`;
   } else {
     let bag = expedition.bag;
@@ -577,7 +645,10 @@ function gameOver(reason) {
 
 function startCombatEncounter(monsterId) {
   const { expedition, permanent } = store.get();
-  const fight = Combat.startCombat({ monsterId, partyIds: expedition.partyIds, bag: expedition.bag });
+  const characterLevels = Object.fromEntries(
+    expedition.partyIds.map((id) => [id, permanent.characterProgress[id]?.level || 1])
+  );
+  const fight = Combat.startCombat({ monsterId, partyIds: expedition.partyIds, bag: expedition.bag, characterLevels });
   const codex = permanent.monsterCodex.includes(monsterId)
     ? permanent.monsterCodex
     : permanent.monsterCodex.concat(monsterId);
@@ -589,37 +660,21 @@ function combatPush() {
   const { fight: updatedFight, result } = Combat.push(state.fight);
   store.update({ fight: updatedFight, expedition: { ...state.expedition, bag: updatedFight.bag } });
 
-  if (result.type === 'choose') {
-    showModal({
-      title: 'Choose a die to roll', icon: '🛡️',
-      bodyHtml: `<p>Divine Guidance drew two dice. Pick one to roll — the other returns to your bag.</p>
-        <div class="die-choice-row">
-          ${updatedFight.pendingChoice.candidates.map((c, i) => {
-            const def = getDieDef(c.dieId);
-            return `<button class="die-choice die-choice--${def.theme}" data-instance="${c.instanceId}">
-              <div class="die-choice-art" style="background-image:url(${DIE_THEME_ART[def.theme] || ''})"></div>
-              <div class="die-choice-text">
-                <div class="die-choice-name">${def.name}</div>
-                <div class="die-choice-desc">${def.description}</div>
-              </div>
-            </button>`;
-          }).join('')}
-        </div>`,
-      buttons: [],
-      dismissible: false,
-    });
-    document.querySelectorAll('.die-choice').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        closeModal();
-        const current = store.get();
-        const { fight: resolvedFight, result: pushResult } = Combat.resolvePush(current.fight, btn.dataset.instance);
-        finishPush(resolvedFight, pushResult);
-      });
-    });
-    return;
-  }
+  // 'choose' (e.g. Paladin's Divine Guidance) is rendered INLINE in the
+  // battle overlay's center zone (see combat-ui.js) — fight.pendingChoice
+  // already holds the candidates, so there's nothing further to do here;
+  // no modal popup, which would break the immersive battle screen.
+  if (result.type === 'choose') return;
 
   finishPush(updatedFight, result);
+}
+
+/** Resolves a pending Paladin-style choose-a-die prompt. Called by the UI when the player taps one of the offered dice. */
+function combatResolveChoice(instanceId) {
+  const state = store.get();
+  const { fight: resolvedFight, result } = Combat.resolvePush(state.fight, instanceId);
+  store.update({ expedition: { ...state.expedition, bag: resolvedFight.bag } });
+  finishPush(resolvedFight, result);
 }
 
 function finishPush(fight, result) {
@@ -686,8 +741,13 @@ function handleVictory(fight) {
 
   if (Math.random() < monsterDef.rewards.diceChance) {
     const dieId = monsterDef.rewards.diceOptions[Math.floor(Math.random() * monsterDef.rewards.diceOptions.length)];
+    const targetCharacterId = expedition.partyIds[Math.floor(Math.random() * expedition.partyIds.length)];
     updatedExpedition.bag = DiceEngine.addDie(updatedExpedition.bag, dieId);
-    rewardText.push(`+1 ${getDieDef(dieId).name}`);
+    updatedExpedition.unbanked = {
+      ...updatedExpedition.unbanked,
+      dice: updatedExpedition.unbanked.dice.concat({ dieId, targetCharacterId }),
+    };
+    rewardText.push(`+1 ${getDieDef(dieId).name} (for ${getCharacterDef(targetCharacterId).name})`);
   }
   const [minGold, maxGold] = monsterDef.rewards.gold;
   const gold = minGold + Math.floor(Math.random() * (maxGold - minGold + 1));
@@ -695,14 +755,23 @@ function handleVictory(fight) {
   rewardText.push(`+${gold} gold`);
 
   const updatedDungeon = Dungeon.markRoomResolved(dungeon);
-  const updatedPermanent = { ...permanent, stats: { ...permanent.stats, monstersDefeated: permanent.stats.monstersDefeated + 1 } };
+
+  const xpAmount = (BALANCE.leveling.xpByMonsterTier[monsterDef.tier] || 10) + (monsterDef.boss ? BALANCE.leveling.xpBossBonus : 0);
+  const { permanent: xpPermanent, levelUps } = Progression.grantPartyXp(permanent, expedition.partyIds, xpAmount);
+  const updatedPermanent = { ...xpPermanent, stats: { ...xpPermanent.stats, monstersDefeated: xpPermanent.stats.monstersDefeated + 1 } };
 
   store.update({ expedition: updatedExpedition, dungeon: updatedDungeon, fight: null, permanent: updatedPermanent });
   saveGame();
 
+  const levelUpHtml = levelUps.map((lu) => {
+    const c = getCharacterDef(lu.characterId);
+    const unlock = c.levelUnlocks.find((u) => u.level === lu.newLevel);
+    return `<p class="level-up-line">⭐ <strong>${c.name}</strong> reached level ${lu.newLevel}!${unlock?.unlockName ? ` Unlocked <strong>${unlock.unlockName}</strong> — ${unlock.unlockDesc}` : ''}</p>`;
+  }).join('');
+
   showModal({
     title: 'Victory!', icon: '🏆',
-    bodyHtml: `<p>${monsterDef.name} is defeated.</p><p>${rewardText.join(' · ')}</p>`,
+    bodyHtml: `<p>${monsterDef.name} is defeated.</p><p>${rewardText.join(' · ')} · +${xpAmount} XP</p>${levelUpHtml}`,
     buttons: [{ label: 'Continue', onClick: closeModal }],
   });
 }
@@ -767,7 +836,7 @@ const actions = {
   toggleCharacterSelect, confirmParty, startExpeditionFromTavern,
   showCharacterInfo, showMonsterCodex, showDiceLibrary, showStats, toggleMap,
   goDirection, interact, openDiceBag, openExtractPrompt, descendFloor,
-  combatPush, combatRelease, combatFlee,
+  combatPush, combatRelease, combatFlee, combatResolveChoice,
   toggleDebugPanel, closeDebugPanel, debugAddDie, debugSetOvercharge, debugDamageParty,
   debugHealParty, debugKillMonster, debugSkipFloor, debugResetExpedition, debugClearSave,
 };

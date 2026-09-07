@@ -13,7 +13,7 @@ import { relativeExits } from '../dungeon/movement.js';
 import { describeRoom } from '../dungeon/encounters.js';
 import { getActiveRenderer } from '../dungeon/renderer.js';
 import { getCharacterDef } from '../data/character-data.js';
-import { renderBattlePanel, resetBattleFxState } from './combat-ui.js';
+import { renderBattleOverlay, resetBattleFxState } from './combat-ui.js';
 import { closeModal } from './modal.js';
 
 let wasInCombat = false;
@@ -31,57 +31,57 @@ export function renderDungeon(root, state, actions) {
   const hpPct = Math.max(0, Math.round((expedition.partyHp / expedition.partyMaxHp) * 100));
 
   root.innerHTML = `
-    <div class="screen screen--dungeon screen--full-bleed" id="dungeon-screen">
+    <div class="screen screen--dungeon screen--full-bleed ${inCombat ? 'screen--in-combat' : ''}" id="dungeon-screen">
       <div class="dungeon-viewport">
         <div id="dungeon-scene" class="dungeon-scene"></div>
 
-        <div class="dungeon-hud-overlay">
-          <div class="region-label">${dungeon.floor.regionName} · Floor ${dungeon.floor.floorNumber}</div>
-          <div class="hud-top-actions">
-            <button class="icon-btn" data-action="open-map" aria-label="Map">🗺️</button>
-            <button class="icon-btn" data-action="open-bag" aria-label="Dice bag">🎲 ${expedition.bag.length}</button>
-          </div>
-        </div>
-
         ${!inCombat ? `
+          <div class="dungeon-hud-overlay">
+            <div class="region-label">${dungeon.floor.regionName} · Floor ${dungeon.floor.floorNumber}</div>
+            <div class="hud-top-actions">
+              <button class="icon-btn" data-action="open-map" aria-label="Map">🗺️</button>
+              <button class="icon-btn" data-action="open-bag" aria-label="Dice bag">🎲 ${expedition.bag.length}</button>
+            </div>
+          </div>
           <div class="room-banner" data-kind="${room.kind}">
             <span class="room-banner-icon">${flavor.icon}</span>
             <span class="room-banner-text">${room.resolved ? 'Cleared.' : flavor.title}</span>
           </div>
-        ` : ''}
+        ` : `<div id="battle-overlay" class="battle-overlay"></div>`}
       </div>
 
-      <div class="dungeon-sheet">
-        <div class="party-strip">
-          ${expedition.partyIds.map((id) => {
-            const c = getCharacterDef(id);
-            return `<button class="party-chip" data-char="${id}" title="Tap for details" style="background-image:url(${c.portrait})"></button>`;
-          }).join('')}
-          <div class="party-hp-bar" aria-label="Party HP">
-            <div class="party-hp-fill" style="width:${hpPct}%"></div>
-            <span class="party-hp-label">${expedition.partyHp}/${expedition.partyMaxHp}</span>
+      ${!inCombat ? `
+        <div class="dungeon-sheet">
+          <div class="party-strip">
+            ${expedition.partyIds.map((id) => {
+              const c = getCharacterDef(id);
+              return `<button class="party-chip" data-char="${id}" title="Tap for details" style="background-image:url(${c.portrait})"></button>`;
+            }).join('')}
+            <div class="party-hp-bar" aria-label="Party HP">
+              <div class="party-hp-fill" style="width:${hpPct}%"></div>
+              <span class="party-hp-label">${expedition.partyHp}/${expedition.partyMaxHp}</span>
+            </div>
           </div>
-        </div>
 
-        <div id="panel-area" class="panel-area"></div>
-      </div>
+          <div id="panel-area" class="panel-area"></div>
+        </div>
+      ` : ''}
     </div>
   `;
 
   mountScene(dungeon, room, exits);
 
-  const panelArea = root.querySelector('#panel-area');
   if (inCombat) {
-    renderBattlePanel(panelArea, state, actions);
+    renderBattleOverlay(root.querySelector('#battle-overlay'), state, actions);
   } else {
+    const panelArea = root.querySelector('#panel-area');
     renderExplorationPanel(panelArea, dungeon, room, exits, actions);
+    root.querySelector('[data-action="open-bag"]').addEventListener('click', actions.openDiceBag);
+    root.querySelector('[data-action="open-map"]').addEventListener('click', actions.toggleMap);
+    root.querySelectorAll('.party-chip').forEach((btn) => {
+      btn.addEventListener('click', () => actions.showCharacterInfo(btn.dataset.char));
+    });
   }
-
-  root.querySelector('[data-action="open-bag"]').addEventListener('click', actions.openDiceBag);
-  root.querySelector('[data-action="open-map"]').addEventListener('click', actions.toggleMap);
-  root.querySelectorAll('.party-chip').forEach((btn) => {
-    btn.addEventListener('click', () => actions.showCharacterInfo(btn.dataset.char));
-  });
 
   if (mapOpen) {
     renderMapOverlay(dungeon, actions);

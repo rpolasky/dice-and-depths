@@ -34,6 +34,54 @@ your explicit upload.
 
 ---
 
+## Latest pass: character leveling, Dual Wield, and a full battle redesign
+
+**Leveling & character identity** (see `js/data/character-data.js`,
+`js/progression/progression.js`):
+- Each character has a permanent `level`/`xp`/`bonusDice` record
+  (`permanent.characterProgress`) that persists across expeditions
+  regardless of who's in the active party.
+- A character's level determines what dice they contribute to the ONE
+  shared expedition bag (`Progression.assembleStartingBag`) and how
+  their ability behaves (`getEffectiveAbility`) — this is deliberately
+  **not** separate per-character dice bags. That would have meant
+  rebuilding the whole push/release turn structure; instead, leveling
+  changes what a character adds to the shared pool, which delivers the
+  same "level 4 Mage vs. level 5 dual-wielding Rogue" party-building
+  choice without the bigger rework.
+- **Rogue's level-5 capstone is Dual Wield** — draws and rolls 2 dice in
+  one PUSH, summed into Overcharge together. Implemented as its own
+  self-contained path in `combat.js` rather than threading through the
+  single-die logic every other ability depends on.
+- XP is granted to the whole active party on every monster kill, scaled
+  by monster tier; leveling up shows a callout in the victory result.
+- **Loot can now target bench characters.** Treasure pickups ask "give
+  this die to..." with every unlocked character shown — picking someone
+  not in the current party means the die isn't usable this run, but
+  permanently joins their loadout once you successfully extract (lost
+  on death, same rule as unbanked gold).
+- Save migrated to v4 for this; a v3 save just starts everyone at level 1.
+
+**Battle screen — full redesign, not boxed panels:**
+- Monster sprites are ~3x bigger.
+- Monster name/HP/intent sits along the top; a vertical, flame-animated
+  Overcharge bar (filling upward, with the current threshold labeled
+  beside it) is pinned to the right edge, party HP to the left.
+- The party is fanned out like a hand of cards along the bottom. Tap a
+  card, a die appears center-screen pulsing to invite a tap, tap it to
+  roll (the real 3D cube from the previous pass) and watch the number
+  reveal with a pop/glow.
+- RELEASE is a circular button under the fan; FLEE is a small link.
+- The old boxed "combat-log" text panel is gone — feedback is now
+  entirely visual (HP/Overcharge bars, threshold banners, ability-credit
+  toasts, FX bursts) rather than a panel to read.
+- Fixed a real integration gap this surfaced: Paladin's "choose a die"
+  ability used to pop up as a modal, which broke the new immersive
+  screen entirely. It's now rendered inline in the same center zone the
+  normal die roll uses.
+
+---
+
 ## Latest pass: native-portrait dungeon art
 
 - **All corridor/room art is now real, native 9:16 portrait photography**

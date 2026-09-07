@@ -5,7 +5,7 @@
 // ============================================================
 
 import { getMonsterDef } from '../data/monster-data.js';
-import { getCharacterDef } from '../data/character-data.js';
+import { getCharacterDef, getEffectiveAbility } from '../data/character-data.js';
 import { getDieDef } from '../data/dice-data.js';
 import * as DiceEngine from '../engine/dice-engine.js';
 import { getThreshold, isBustValue, computeReleaseDamage, bustCeiling } from '../engine/overcharge.js';
@@ -21,29 +21,34 @@ function stampEvent(type, extra = {}) {
   return { type, seq: ++eventSeq, ...extra };
 }
 
-/** Builds a lookup of active abilities for the current party, by hook name. */
-function abilitiesByHook(partyIds) {
+/**
+ * Builds a lookup of active abilities for the current party, by hook name.
+ * Uses each character's LEVEL-EFFECTIVE ability (see character-data.js's
+ * getEffectiveAbility) so a level-5 Rogue's Dual Wield actually applies
+ * instead of their base first-bust-mitigation hook.
+ */
+function abilitiesByHook(partyIds, characterLevels = {}) {
   const map = {};
   for (const id of partyIds) {
-    const def = getCharacterDef(id);
-    const hook = def.ability.hook;
-    (map[hook] = map[hook] || []).push({ characterId: id, ...def.ability });
+    const level = characterLevels[id] || 1;
+    const ability = getEffectiveAbility(id, level);
+    (map[ability.hook] = map[ability.hook] || []).push({ characterId: id, ...ability });
   }
   return map;
 }
 
-export function startCombat({ monsterId, partyIds, bag }) {
+export function startCombat({ monsterId, partyIds, bag, characterLevels = {} }) {
   const monsterDef = getMonsterDef(monsterId);
   return {
     monster: createMonsterState(monsterDef),
     partyIds,
-    abilities: abilitiesByHook(partyIds),
+    abilities: abilitiesByHook(partyIds, characterLevels),
     bag, // reference to the shared dice bag (array), combat returns a new one each mutation
     overcharge: 0,
     consecutivePushes: 0,
     bustCountThisFight: 0,
     webActive: false,
-    pendingChoice: null, // { candidates: [dieInstance, dieInstance] } for Paladin ability
+    pendingChoice: null, // { candidates: [dieInstance, ...] } for Paladin/Dual-Wield-style abilities
     log: [],
     outcome: null, // null | 'victory' | 'defeat' | 'fled'
     lastRoll: null,
@@ -55,9 +60,10 @@ export function getIntentInfo(fight) {
   return describeIntent(intent);
 }
 
-export function bagPeek(fight, count = 1) {
-  if (!fight.abilities.onRevealNextDie) return [];
-  return DiceEngine.peek(fight.bag, count).map((d) => getDieDef(d.dieId));
+export function bagPeek(fight) {
+  const revealAbility = fight.abilities.onRevealNextDie?.[0];
+  if (!revealAbility) return [];
+  return DiceEngine.peek(fight.bag, revealAbility.revealCount || 1).map((d) => getDieDef(d.dieId));
 }
 
 /**
@@ -68,6 +74,11 @@ export function bagPeek(fight, count = 1) {
 export function push(fight) {
   if (fight.bag.length === 0) {
     return { fight, result: { type: 'no-dice' } };
+  }
+
+  const dualWieldAbility = fight.abilities.onDualWield?.[0];
+  if (dualWieldAbility) {
+    return resolveDualWieldPush(fight);
   }
 
   const paladinAbility = fight.abilities.onPushDrawExtra?.[0];
@@ -161,6 +172,75 @@ export function resolvePush(fight, chosenInstanceId) {
 
   nextFight.lastEvent = stampEvent(face.type === 'crit' ? 'crit-roll' : 'roll', { face });
   return { fight: nextFight, result: { type: 'roll', face } };
+}
+
+/**
+ * Rogue's level-5 capstone: draw and roll TWO dice in a single push,
+ * summing their effects into one combined result. Implemented as its
+ * own self-contained path (rather than threading through resolvePush)
+ * to avoid destabilizing the single-die logic every other ability relies on.
+ */
+function resolveDualWieldPush(fight) {
+  const draw1 = DiceEngine.drawNext(fight.bag);
+  let bag = draw1.bag;
+  const dice = [draw1.die];
+  if (bag.length > 0) {
+    const draw2 = DiceEngine.drawNext(bag);
+    bag = draw2.bag;
+    dice.push(draw2.die);
+  }
+
+  const faces = dice.map((d) => DiceEngine.rollDie(d));
+  const log = fight.log.slice();
+  let overcharge = fight.overcharge;
+  let consecutivePushes = fight.consecutivePushes;
+  let healAmount = 0;
+  let bustTriggered = fight.webActive ? Math.random() < 0.2 : false;
+  let clericCredit = null;
+  const overchargeBefore = fight.overcharge;
+
+  for (const face of faces) {
+    if (face.type === 'danger' && BALANCE.overcharge.dangerFaceAlwaysBusts) {
+      bustTriggered = true;
+    } else if (face.type === 'heal') {
+      const clericBoost = fight.abilities.onHealingDieBoost?.[0];
+      const mult = clericBoost ? 1 + clericBoost.boostPercent / 100 : 1;
+      const amt = Math.round(face.value * mult);
+      healAmount += amt;
+      if (clericBoost) clericCredit = { characterId: clericBoost.characterId, hook: 'onHealingDieBoost' };
+      log.push(`${face.dieName} heals the party for ${amt}.`);
+    } else {
+      overcharge += face.value;
+      consecutivePushes += 1;
+      log.push(`${face.dieName} rolled ${face.value}${face.type === 'crit' ? ' — CRITICAL!' : ''}${face.type === 'element' ? ` (${face.element})` : ''}.`);
+    }
+  }
+  if (dice.length === 2) log.push(`🗡️ Dual Wield: both blades strike! Overcharge: ${overcharge}.`);
+  if (isBustValue(overcharge)) bustTriggered = true;
+
+  const combinedFace = {
+    value: faces.reduce((sum, f) => sum + (f.type === 'heal' ? 0 : (f.value || 0)), 0),
+    dieName: dice.length === 2 ? 'Dual Wield' : faces[0].dieName,
+    type: faces.some((f) => f.type === 'crit') ? 'crit' : 'value',
+  };
+
+  let nextFight = {
+    ...fight, bag, overcharge, consecutivePushes,
+    pendingChoice: null, webActive: false, log, lastRoll: combinedFace,
+  };
+
+  if (bustTriggered) {
+    nextFight = applyBust(nextFight);
+    nextFight.lastEvent = stampEvent('bust', { face: combinedFace, abilityCredit: nextFight.abilityCredit });
+    return { fight: nextFight, result: { type: 'bust', face: combinedFace, healAmount } };
+  }
+  if (healAmount > 0 && overcharge === overchargeBefore) {
+    // Every rolled face this push was a heal face — treat it as a pure heal event.
+    nextFight.lastEvent = stampEvent('heal', { face: combinedFace, healAmount, abilityCredit: clericCredit });
+    return { fight: nextFight, result: { type: 'heal', face: combinedFace, healAmount } };
+  }
+  nextFight.lastEvent = stampEvent(combinedFace.type === 'crit' ? 'crit-roll' : 'roll', { face: combinedFace });
+  return { fight: nextFight, result: { type: 'roll', face: combinedFace, healAmount } };
 }
 
 function applyBust(fight) {

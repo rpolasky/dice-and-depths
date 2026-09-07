@@ -89,8 +89,11 @@ function renderTavern(root, state, actions) {
         ${hasParty
           ? permanent.activeParty.map((id) => {
               const c = getCharacterDef(id);
+              const lvl = permanent.characterProgress[id]?.level || 1;
               return `<button class="party-chip party-chip--large" data-char="${id}">
-                <div class="party-chip-portrait" style="background-image:url(${c.portrait})"></div>
+                <div class="party-chip-portrait" style="background-image:url(${c.portrait})">
+                  <span class="party-chip-level">Lv.${lvl}</span>
+                </div>
                 <span class="party-chip-name">${c.name}</span>
               </button>`;
             }).join('')
@@ -131,9 +134,12 @@ function renderPartySelect(root, state, actions) {
         ${state.permanent.unlockedCharacters.map((id) => {
           const c = getCharacterDef(id);
           const isSelected = selected.includes(id);
+          const lvl = state.permanent.characterProgress[id]?.level || 1;
           return `
             <button class="character-card ${isSelected ? 'character-card--selected' : ''}" data-id="${id}">
-              <div class="character-portrait" style="background-image:url(${c.portrait})"></div>
+              <div class="character-portrait" style="background-image:url(${c.portrait})">
+                <span class="char-level-badge char-level-badge--corner">Lv.${lvl}</span>
+              </div>
               <div class="character-name">${c.name}</div>
               <div class="character-tagline">${c.tagline}</div>
               <div class="character-desc">${c.description}</div>

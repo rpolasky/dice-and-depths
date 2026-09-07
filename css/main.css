@@ -184,6 +184,7 @@ p { line-height: 1.5; }
 }
 .character-icon { font-size: 1.6rem; }
 .character-portrait {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
   border-radius: var(--radius-s);
@@ -199,6 +200,65 @@ p { line-height: 1.5; }
   background-size: cover;
   background-position: center;
   box-shadow: 0 8px 20px -6px rgba(0,0,0,0.6);
+}
+
+/* ---------- Character level badges ---------- */
+
+.char-level-badge {
+  display: inline-block;
+  background: var(--c-surface-raised);
+  border: 1px solid var(--c-ember-dim);
+  color: var(--c-ember);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.char-level-badge--corner {
+  position: absolute;
+  top: 6px; right: 6px;
+  font-size: 0.62rem;
+  padding: 1px 6px;
+}
+.char-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+/* ---------- Loot recipient picker (treasure -> which character?) ---------- */
+
+.loot-recipient-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 50vh; overflow-y: auto; }
+.loot-recipient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--c-surface-raised);
+  border: 1px solid var(--c-surface-line);
+  border-radius: var(--radius-m);
+  padding: 8px 12px;
+  text-align: left;
+}
+.loot-recipient-portrait {
+  width: 44px;
+  aspect-ratio: 3 / 4;
+  flex-shrink: 0;
+  border-radius: var(--radius-s);
+  background-size: cover;
+  background-position: center;
+}
+.loot-recipient-name { font-weight: 700; color: var(--c-parchment); font-size: 0.9rem; }
+.loot-recipient-level { color: var(--c-ember); font-size: 0.72rem; font-weight: 600; margin-left: 4px; }
+.loot-recipient-tag { font-size: 0.72rem; color: var(--c-text-muted); margin-top: 2px; }
+
+.level-up-line {
+  background: rgba(232,163,61,0.12);
+  border: 1px solid var(--c-ember-dim);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  margin-top: 6px;
 }
 .character-name { font-family: var(--font-display); font-weight: 600; color: var(--c-parchment); }
 .character-tagline { color: var(--c-ember); font-size: 0.8rem; }
@@ -349,11 +409,22 @@ p { line-height: 1.5; }
   border: 1px solid var(--c-surface-line);
 }
 .party-chip-portrait {
+  position: relative;
   width: 64px;
   aspect-ratio: 3 / 4;
   border-radius: var(--radius-s);
   background-size: cover;
   background-position: center;
+}
+.party-chip-level {
+  position: absolute;
+  bottom: 2px; right: 2px;
+  background: rgba(13,14,19,0.85);
+  color: var(--c-ember);
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 6px;
 }
 .party-chip-name {
   font-size: 0.65rem;
