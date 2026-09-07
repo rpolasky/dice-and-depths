@@ -14,9 +14,9 @@ import * as Encounters from './dungeon/encounters.js';
 import * as Progression from './progression/progression.js';
 import { getMonsterDef, MONSTER_DATA } from './data/monster-data.js';
 import { getCharacterDef, nextUnlock } from './data/character-data.js';
-import { getDieDef } from './data/dice-data.js';
+import { getDieDef, getMaxFaceValue } from './data/dice-data.js';
 import { getPuzzle } from './data/content-data.js';
-import { DIE_THEME_ART } from './data/sprite-data.js';
+import { DIE_SHAPE_ART, DIE_THEME_FILTER, shapeForMaxFace } from './data/sprite-data.js';
 import { BALANCE } from './data/balance.js';
 import * as UI from './ui/ui.js';
 import { showModal, closeModal } from './ui/modal.js';
@@ -301,13 +301,17 @@ function openTreasureModal() {
     title: 'Treasure', icon: '💰',
     bodyHtml: `<p>Choose one die to add to your bag.</p>
       <div class="die-choice-row">
-        ${choices.map((d, i) => `<button class="die-choice die-choice--${d.theme}" data-i="${i}">
-          <div class="die-choice-art" style="background-image:url(${DIE_THEME_ART[d.theme] || ''})"></div>
+        ${choices.map((d, i) => {
+          const shape = shapeForMaxFace(getMaxFaceValue(d.id));
+          const filter = DIE_THEME_FILTER[d.theme] || 'none';
+          return `<button class="die-choice die-choice--${d.theme}" data-i="${i}">
+          <div class="die-choice-art" style="background-image:url(${DIE_SHAPE_ART[shape]}); filter:${filter}"></div>
           <div class="die-choice-text">
             <div class="die-choice-name">${d.name}</div>
             <div class="die-choice-desc">${d.description}</div>
           </div>
-        </button>`).join('')}
+        </button>`;
+        }).join('')}
       </div>`,
     buttons: [],
     dismissible: false,
@@ -658,13 +662,15 @@ function startCombatEncounter(monsterId) {
 function combatPush() {
   const state = store.get();
   const { fight: updatedFight, result } = Combat.push(state.fight);
-  store.update({ fight: updatedFight, expedition: { ...state.expedition, bag: updatedFight.bag } });
 
   // 'choose' (e.g. Paladin's Divine Guidance) is rendered INLINE in the
-  // battle overlay's center zone (see combat-ui.js) — fight.pendingChoice
-  // already holds the candidates, so there's nothing further to do here;
-  // no modal popup, which would break the immersive battle screen.
-  if (result.type === 'choose') return;
+  // battle overlay's center zone (see combat-ui.js) — this is the one
+  // legitimate standalone update in this flow (finishPush isn't reached
+  // yet, since no die has actually resolved).
+  if (result.type === 'choose') {
+    store.update({ fight: updatedFight, expedition: { ...state.expedition, bag: updatedFight.bag } });
+    return;
+  }
 
   finishPush(updatedFight, result);
 }
@@ -673,22 +679,26 @@ function combatPush() {
 function combatResolveChoice(instanceId) {
   const state = store.get();
   const { fight: resolvedFight, result } = Combat.resolvePush(state.fight, instanceId);
-  store.update({ expedition: { ...state.expedition, bag: resolvedFight.bag } });
   finishPush(resolvedFight, result);
 }
 
 function finishPush(fight, result) {
   let nextFight = fight;
+  let updatedExpedition = store.get().expedition;
+
   if (result.type === 'heal' && result.healAmount) {
-    const { expedition } = store.get();
-    store.update({ expedition: applyPartyHeal(expedition, result.healAmount) });
+    updatedExpedition = applyPartyHeal(updatedExpedition, result.healAmount);
   }
   if (result.type === 'bust') {
     const { fight: advancedFight, effects } = Combat.advanceMonster(nextFight);
     nextFight = advancedFight;
-    applyMonsterEffects(effects);
+    if (effects.partyDamage > 0) updatedExpedition = applyPartyDamage(updatedExpedition, effects.partyDamage);
   }
-  store.update({ fight: nextFight, expedition: { ...store.get().expedition, bag: nextFight.bag } });
+  // A single store.update() for the whole action: the corridor scene
+  // remounts on every render, so multiple sequential updates for one
+  // user action would let a later render's remount wipe out FX elements
+  // (floating damage numbers, bursts) that an earlier render just added.
+  store.update({ fight: nextFight, expedition: { ...updatedExpedition, bag: nextFight.bag } });
   checkPartyWipe();
 }
 
@@ -703,8 +713,9 @@ function combatRelease() {
   }
 
   const { fight: advancedFight, effects } = Combat.advanceMonster(releasedFight);
-  store.update({ fight: advancedFight, expedition: { ...state.expedition, bag: advancedFight.bag } });
-  applyMonsterEffects(effects);
+  let updatedExpedition = { ...state.expedition, bag: advancedFight.bag };
+  if (effects.partyDamage > 0) updatedExpedition = applyPartyDamage(updatedExpedition, effects.partyDamage);
+  store.update({ fight: advancedFight, expedition: updatedExpedition });
   checkPartyWipe();
 }
 
@@ -726,13 +737,6 @@ function combatFlee() {
     buttons: [{ label: 'Continue', onClick: closeModal }],
   });
 }
-function applyMonsterEffects(effects) {
-  if (effects.partyDamage > 0) {
-    const { expedition } = store.get();
-    store.update({ expedition: applyPartyDamage(expedition, effects.partyDamage) });
-  }
-}
-
 function handleVictory(fight) {
   const monsterDef = getMonsterDef(fight.monster.id);
   const { expedition, dungeon, permanent } = store.get();

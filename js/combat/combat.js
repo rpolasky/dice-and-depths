@@ -52,6 +52,8 @@ export function startCombat({ monsterId, partyIds, bag, characterLevels = {} }) 
     log: [],
     outcome: null, // null | 'victory' | 'defeat' | 'fled'
     lastRoll: null,
+    lastEvent: null,
+    partyDamageEvent: null,
   };
 }
 
@@ -336,6 +338,11 @@ export function advanceMonster(fight) {
     bag,
     webActive: fight.webActive || effects.webActive,
     log,
+    // Separate from `lastEvent` (roll/release/bust/victory) so a release
+    // that immediately triggers a monster counter-attack doesn't have one
+    // event silently clobber the other before the UI ever sees it — both
+    // need their own FX to fire.
+    partyDamageEvent: effects.partyDamage > 0 ? stampEvent('party-damage', { damage: effects.partyDamage }) : fight.partyDamageEvent,
   };
 
   return { fight: nextFight, effects };

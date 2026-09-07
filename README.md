@@ -34,6 +34,49 @@ your explicit upload.
 
 ---
 
+## Latest pass: real dice art, real numerals, and a real animation bug fix
+
+**New art, all provided by the project owner (no license required):**
+- Six real hand-painted polyhedra (`assets/dice/shapes/`) — one image per
+  actual shape (d4/d6/d8/d10/d12/d20), recolored per die theme with a
+  genuine CSS `filter: hue-rotate()/saturate()` rather than needing
+  separate art per theme. Worth noting: the source files' names didn't
+  match their actual geometry (e.g. one labeled "d8 octahedron" was
+  visually a d4) — every shape was verified by eye before being wired in.
+- Real carved-stone numerals (`assets/dice/numerals/`) for every value
+  our dice actually roll, overlaid directly on the die face instead of
+  plain CSS text. Extracted from a flattened JPG sheet with a baked-in
+  checkerboard (not true alpha) via a custom background-removal pass
+  that detects the checkerboard's alternating phase rather than just
+  matching colors, so it doesn't erase the numerals' own gray stonework.
+- Real status icons (`assets/fx/icons/`) for elemental/crit/heal/bust
+  die faces, and a real hand-drawn flame (`assets/fx/flame-hand.png`)
+  animating on the Overcharge bar instead of a CSS-drawn blob.
+
+**Battle layout, rebuilt per direct feedback:**
+- HP and Overcharge are now compact fixed-height columns (not
+  full-height bars) with their action buttons attached directly:
+  Flee under HP, the circular Release button under Overcharge.
+- Open space in the middle for the (now much larger) monster sprite;
+  the dice roll sits just above the party's card fan, which moved
+  further down.
+- Tapping a party card enlarges it over the rest of the hand and shows
+  its ability description underneath.
+
+**A real bug, not just missing polish:** the "release feels instant,
+nothing shows a hit landed" complaint turned out to have a concrete
+cause. `combatRelease()`/`combatPush()` were firing multiple sequential
+state updates per action (one for the release, another for the
+monster's counter-attack), and since the corridor scene fully remounts
+on every render, the second render was silently wiping out the floating
+damage numbers and screen-flash the first render had just added a few
+milliseconds earlier. Fixed by consolidating each user action into a
+single state update — verified via direct DOM testing that both the
+release hit and the monster's counter-attack now reliably produce a
+floating number + screen flash/shake.
+
+---
+
 ## Latest pass: character leveling, Dual Wield, and a full battle redesign
 
 **Leveling & character identity** (see `js/data/character-data.js`,

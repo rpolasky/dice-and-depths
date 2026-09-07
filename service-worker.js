@@ -6,7 +6,7 @@
 // cleared out automatically.
 // ============================================================
 
-const CACHE_NAME = 'dice-and-depths-v8';
+const CACHE_NAME = 'dice-and-depths-v9';
 
 const PRECACHE_URLS = [
   './',
@@ -65,19 +65,30 @@ const PRECACHE_URLS = [
   './assets/characters/cleric.svg',
   './assets/characters/scout.svg',
 
-  './assets/dice/stone-d6.png',
-  './assets/dice/ember-d10.png',
-  './assets/dice/gold-d20.png',
-  './assets/dice/verdant-d12.png',
-  './assets/dice/arcane-d6.png',
-  './assets/dice/void-d6.png',
-  './assets/dice/lucky-d6.png',
-  './assets/dice/faces/face1.png',
-  './assets/dice/faces/face2.png',
-  './assets/dice/faces/face3.png',
-  './assets/dice/faces/face4.png',
-  './assets/dice/faces/face5.png',
-  './assets/dice/faces/face6.png',
+  './assets/dice/shapes/d4.png',
+  './assets/dice/shapes/d6.png',
+  './assets/dice/shapes/d8.png',
+  './assets/dice/shapes/d10.png',
+  './assets/dice/shapes/d12.png',
+  './assets/dice/shapes/d20.png',
+  './assets/dice/numerals/1.png',
+  './assets/dice/numerals/2.png',
+  './assets/dice/numerals/3.png',
+  './assets/dice/numerals/4.png',
+  './assets/dice/numerals/5.png',
+  './assets/dice/numerals/6.png',
+  './assets/dice/numerals/7.png',
+  './assets/dice/numerals/8.png',
+  './assets/dice/numerals/9.png',
+  './assets/dice/numerals/10.png',
+  './assets/dice/numerals/11.png',
+  './assets/dice/numerals/12.png',
+  './assets/dice/numerals/13.png',
+  './assets/dice/numerals/14.png',
+  './assets/dice/numerals/16.png',
+  './assets/dice/numerals/17.png',
+  './assets/dice/numerals/19.png',
+  './assets/dice/numerals/20.png',
 
   './assets/monsters/goblin.png',
   './assets/monsters/goblin_brute.png',
@@ -97,6 +108,15 @@ const PRECACHE_URLS = [
   './assets/fx/fire-burst.png',
   './assets/fx/heal-sparkle.png',
   './assets/fx/sparkle.png',
+  './assets/fx/flame-hand.png',
+  './assets/fx/icons/poison.png',
+  './assets/fx/icons/rage.png',
+  './assets/fx/icons/healing.png',
+  './assets/fx/icons/lightning.png',
+  './assets/fx/icons/double_arrow.png',
+  './assets/fx/icons/double_sword.png',
+  './assets/fx/icons/skull.png',
+  './assets/fx/icons/double_axe.png',
 
   './assets/env/gold-pile.png',
   './assets/env/stairs.png',
